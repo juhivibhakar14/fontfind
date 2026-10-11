@@ -1,0 +1,4 @@
+import {meta} from "@/lib/seo";export const metadata=meta("Privacy Policy","How FontFind handles your uploaded images.","/privacy");
+export default function Page(){return <article className="mx-auto max-w-2xl px-4 pt-14 leading-relaxed"><h1 className="font-display text-4xl font-semibold">Privacy</h1>
+<p className="mt-4">Images you upload are processed in your browser and are not stored by FontFind. If a server-side identifier is connected in the future, images will be processed in memory and deleted immediately after analysis.</p>
+<p className="mt-3">We do not require accounts or collect personal information. Matching happens on your device. Your browser downloads open-source text-recognition files and font previews from public CDNs (Google Fonts, jsDelivr), which can see your IP address but never your image. Optional privacy-friendly analytics (Plausible) uses no cookies.</p></article>}
