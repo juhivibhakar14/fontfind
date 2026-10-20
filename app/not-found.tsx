@@ -13,7 +13,7 @@ export default function NotFound() {
           href="/"
           className="rounded-xl bg-ink px-5 py-2.5 text-sm font-medium text-bg hover:opacity-90 transition-opacity"
         >
-          Identify a Font
+          Match a Font
         </Link>
         <Link
           href="/fonts"

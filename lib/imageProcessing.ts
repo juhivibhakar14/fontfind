@@ -13,6 +13,39 @@ export interface FontFeatures {
   boxHeight: number;
 }
 
+export type EstimatedCategory =
+  | "Sans Serif"
+  | "Serif"
+  | "Monospace"
+  | "Script/Handwriting"
+  | "Display";
+
+export type WeightClass = "Thin" | "Regular" | "Bold" | "Black";
+export type WidthClass = "Condensed" | "Normal" | "Wide";
+export type MatchLabel = "Strong match" | "Good match" | "Weak match";
+
+export interface StyleEstimate {
+  category: EstimatedCategory;
+  categoryConfidence: "high" | "low";
+  allowedCategories: string[];
+  weightClass: WeightClass;
+  allowedWeights: WeightClass[];
+  widthClass: WidthClass;
+  summary: string;
+}
+
+export const MATCH_THRESHOLDS = {
+  strong: 0.18,
+  good: 0.35,
+};
+
+export function getMatchLabel(distance: number): MatchLabel {
+  if (!Number.isFinite(distance)) return "Weak match";
+  if (distance <= MATCH_THRESHOLDS.strong) return "Strong match";
+  if (distance <= MATCH_THRESHOLDS.good) return "Good match";
+  return "Weak match";
+}
+
 export const FEATURE_WEIGHTS = {
   aspect: 0.22,
   density: 0.18,
@@ -64,9 +97,6 @@ export function computeOtsuThreshold(L: Float32Array): number {
   return threshold;
 }
 
-/**
- * 1D box/gaussian blur [0.25, 0.5, 0.25] for profile smoothing.
- */
 function blur1D(arr: Float32Array): Float32Array {
   const n = arr.length;
   const out = new Float32Array(n);
@@ -78,9 +108,6 @@ function blur1D(arr: Float32Array): Float32Array {
   return out;
 }
 
-/**
- * Resamples a numeric profile to target length using linear interpolation.
- */
 function resampleProfile(src: number[] | Float32Array, targetLen: number): Float32Array {
   const n = src.length;
   const out = new Float32Array(targetLen);
@@ -101,8 +128,7 @@ function resampleProfile(src: number[] | Float32Array, targetLen: number): Float
 }
 
 /**
- * Extracts typographic features from a binary mask (1 = ink, 0 = background)
- * with dimensions bw × bh.
+ * Extracts typographic features from a binary mask (1 = ink, 0 = background).
  */
 export function extractFeaturesFromMask(
   mask: Uint8Array,
@@ -140,7 +166,6 @@ export function extractFeaturesFromMask(
         rawColInk[x]++;
         rawRowInk[y]++;
 
-        // Check if pixel is on an edge (has at least 1 background neighbor)
         const isEdge =
           x === 0 ||
           x === bw - 1 ||
@@ -155,9 +180,7 @@ export function extractFeaturesFromMask(
           edgePixels++;
         }
 
-        // Detect serif presence at top/bottom stroke ends
         if (y < bh * 0.18) {
-          // Check horizontal expansion relative to stroke column
           if (x > 0 && x < bw - 1 && mask[idx - 1] === 1 && mask[idx + 1] === 1) {
             topTerminals++;
           }
@@ -173,7 +196,6 @@ export function extractFeaturesFromMask(
 
   if (totalInk < 15) return emptyFeatures;
 
-  // Normalize column & row projections
   for (let x = 0; x < bw; x++) rawColInk[x] /= bh;
   for (let y = 0; y < bh; y++) rawRowInk[y] /= bw;
 
@@ -185,7 +207,6 @@ export function extractFeaturesFromMask(
   const strokeThickness = totalInk / Math.max(1, edgePixels);
   const serifScore = Math.min(1, (topTerminals + botTerminals) / Math.max(1, totalInk * 0.3));
 
-  // Estimate x-height ratio from vertical projection inflection
   let xHeightY = Math.round(bh * 0.4);
   let maxGrad = 0;
   for (let y = Math.round(bh * 0.2); y < Math.round(bh * 0.65); y++) {
@@ -211,9 +232,151 @@ export function extractFeaturesFromMask(
   };
 }
 
+function analyzeHProfile(hProfile: Float32Array): {
+  minValley: number;
+  valleysCount: number;
+  peakPeriodStdDev: number;
+} {
+  const n = hProfile.length;
+  let minValley = 1.0;
+  let valleysCount = 0;
+  const peaks: number[] = [];
+
+  for (let i = 2; i < n - 2; i++) {
+    const val = hProfile[i];
+    if (val < minValley) minValley = val;
+    if (val < 0.05) valleysCount++;
+
+    if (
+      val > 0.12 &&
+      val >= hProfile[i - 1] &&
+      val >= hProfile[i + 1] &&
+      val > hProfile[i - 2] &&
+      val > hProfile[i + 2]
+    ) {
+      peaks.push(i);
+    }
+  }
+
+  let peakPeriodStdDev = 999;
+  if (peaks.length >= 3) {
+    const diffs: number[] = [];
+    for (let i = 1; i < peaks.length; i++) {
+      diffs.push(peaks[i] - peaks[i - 1]);
+    }
+    const mean = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+    const variance = diffs.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / diffs.length;
+    peakPeriodStdDev = Math.sqrt(variance);
+  }
+
+  return { minValley, valleysCount, peakPeriodStdDev };
+}
+
+/**
+ * Estimates typographic style (category, weight class, width class) from image features.
+ */
+export function estimateStyle(features: FontFeatures, textLength = 6): StyleEstimate {
+  if (features.isEmpty) {
+    return {
+      category: "Sans Serif",
+      categoryConfidence: "low",
+      allowedCategories: ["Sans Serif", "Serif", "Display", "Monospace", "Script/Handwriting"],
+      weightClass: "Regular",
+      allowedWeights: ["Thin", "Regular", "Bold", "Black"],
+      widthClass: "Normal",
+      summary: "regular, normal-width sans serif",
+    };
+  }
+
+  // 1. Weight Class estimation from density and strokeThickness
+  let weightClass: WeightClass = "Regular";
+  let allowedWeights: WeightClass[] = ["Thin", "Regular", "Bold"];
+
+  if (features.density < 0.27 || features.strokeThickness < 2.1) {
+    weightClass = "Thin";
+    allowedWeights = ["Thin", "Regular"];
+  } else if (features.density >= 0.52 || features.strokeThickness >= 4.6) {
+    weightClass = "Black";
+    allowedWeights = ["Bold", "Black"];
+  } else if (features.density >= 0.38 || features.strokeThickness >= 3.2) {
+    weightClass = "Bold";
+    allowedWeights = ["Regular", "Bold", "Black"];
+  } else {
+    weightClass = "Regular";
+    allowedWeights = ["Thin", "Regular", "Bold"];
+  }
+
+  // 2. Width Class estimation from character-normalized aspect ratio
+  const safeLength = Math.max(2, textLength);
+  const charAspect = features.aspect / safeLength;
+  let widthClass: WidthClass = "Normal";
+
+  if (charAspect < 0.44) {
+    widthClass = "Condensed";
+  } else if (charAspect > 0.72) {
+    widthClass = "Wide";
+  } else {
+    widthClass = "Normal";
+  }
+
+  // 3. Category estimation across 5 categories
+  const hMetrics = analyzeHProfile(features.hProfile);
+  let category: EstimatedCategory = "Sans Serif";
+  let categoryConfidence: "high" | "low" = "high";
+  let allowedCategories: string[] = ["Sans Serif"];
+
+  const isConnectedCursive = safeLength >= 4 && hMetrics.minValley > 0.05 && hMetrics.valleysCount < 2;
+  const isScriptMetrics = widthClass === "Wide" && features.density < 0.38 && features.xHeightRatio < 0.62;
+
+  if (isConnectedCursive || isScriptMetrics) {
+    category = "Script/Handwriting";
+    categoryConfidence = "high";
+    allowedCategories = ["Script", "Handwriting", "Script/Handwriting"];
+  } else if (features.serifScore >= 0.20) {
+    category = "Serif";
+    if (features.serifScore >= 0.28) {
+      categoryConfidence = "high";
+      allowedCategories = ["Serif"];
+    } else {
+      categoryConfidence = "low";
+      allowedCategories = ["Serif", "Sans Serif"];
+    }
+  } else if (hMetrics.peakPeriodStdDev < 2.4 && charAspect >= 0.48 && charAspect <= 0.76) {
+    category = "Monospace";
+    categoryConfidence = "high";
+    allowedCategories = ["Monospace"];
+  } else if (features.density >= 0.52 || charAspect < 0.40) {
+    category = "Display";
+    categoryConfidence = "low";
+    allowedCategories = ["Display", "Sans Serif"];
+  } else {
+    category = "Sans Serif";
+    if (features.serifScore < 0.14) {
+      categoryConfidence = "high";
+      allowedCategories = ["Sans Serif"];
+    } else {
+      categoryConfidence = "low";
+      allowedCategories = ["Sans Serif", "Serif"];
+    }
+  }
+
+  const categoryName =
+    category === "Script/Handwriting" ? "script" : category.toLowerCase();
+  const summary = `${weightClass.toLowerCase()}, ${widthClass.toLowerCase()}-width ${categoryName}`;
+
+  return {
+    category,
+    categoryConfidence,
+    allowedCategories,
+    weightClass,
+    allowedWeights,
+    widthClass,
+    summary,
+  };
+}
+
 /**
  * Crops and extracts typographic features from an input image/canvas without stretching.
- * Automatically identifies text polarity (light-on-dark vs dark-on-light) using Otsu.
  */
 export function extractImageFeatures(src: CanvasImageSource, sw: number, sh: number): FontFeatures {
   const k = Math.min(1, 1000 / Math.max(sw, 1));
@@ -232,7 +395,6 @@ export function extractImageFeatures(src: CanvasImageSource, sw: number, sh: num
 
   let borderLSum = 0;
   let borderCount = 0;
-  let totalLSum = 0;
 
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -240,12 +402,11 @@ export function extractImageFeatures(src: CanvasImageSource, sw: number, sh: num
       const alpha = d[idx * 4 + 3];
       let lum: number;
       if (alpha < 128) {
-        lum = 255; // Treat transparent as white background
+        lum = 255;
       } else {
         lum = 0.299 * d[idx * 4] + 0.587 * d[idx * 4 + 1] + 0.114 * d[idx * 4 + 2];
       }
       L[idx] = lum;
-      totalLSum += lum;
 
       if (x < 3 || x >= w - 3 || y < 3 || y >= h - 3) {
         borderLSum += lum;
@@ -256,10 +417,8 @@ export function extractImageFeatures(src: CanvasImageSource, sw: number, sh: num
 
   const otsuThr = computeOtsuThreshold(L);
   const borderAvgL = borderCount > 0 ? borderLSum / borderCount : 255;
-  // If border is brighter than threshold, background is light and ink is dark
   const isLightBg = borderAvgL >= otsuThr;
 
-  // Binarize
   const rawMask = new Uint8Array(w * h);
   const rowInk = new Int32Array(h);
   for (let y = 0; y < h; y++) {
@@ -273,7 +432,6 @@ export function extractImageFeatures(src: CanvasImageSource, sw: number, sh: num
     }
   }
 
-  // Find dominant text band vertically
   let bestY0 = 0;
   let bestY1 = h - 1;
   let maxBandInk = 0;
@@ -306,7 +464,6 @@ export function extractImageFeatures(src: CanvasImageSource, sw: number, sh: num
     bestY1 = h - 1;
   }
 
-  // Horizontal bounds in dominant band
   let x0 = w;
   let x1 = -1;
   for (let y = bestY0; y <= bestY1; y++) {
@@ -355,8 +512,6 @@ export const verifiedFontsCache = new Set<string>();
 
 /**
  * Checks if a candidate font family has loaded and renders distinct glyphs on canvas.
- * Compares test string width against serif, monospace, and sans-serif fallbacks.
- * If width matches fallback for both serif and monospace, treats as NOT loaded.
  */
 export function verifyFontLoaded(family: string, testString = "MWQgypq190"): boolean {
   if (typeof document === "undefined" || !document.fonts) return false;
@@ -366,22 +521,18 @@ export function verifyFontLoaded(family: string, testString = "MWQgypq190"): boo
     const ctx = getMeasureContext();
     if (!ctx) return false;
 
-    // 1. Measure fallback widths
     ctx.font = `72px serif`;
     const serifWidth = ctx.measureText(testString).width;
 
     ctx.font = `72px monospace`;
     const monoWidth = ctx.measureText(testString).width;
 
-    // 2. Measure candidate font
     ctx.font = `72px "${family}", serif`;
     const candidateSerif = ctx.measureText(testString).width;
 
     ctx.font = `72px "${family}", monospace`;
     const candidateMono = ctx.measureText(testString).width;
 
-    // If candidate width matches fallback width for BOTH serif and monospace,
-    // the web font is not loaded (silently falling back)
     const isSerifFallback = Math.abs(candidateSerif - serifWidth) < 0.05;
     const isMonoFallback = Math.abs(candidateMono - monoWidth) < 0.05;
 
@@ -389,7 +540,6 @@ export function verifyFontLoaded(family: string, testString = "MWQgypq190"): boo
       return false;
     }
 
-    // 3. Check document.fonts.check if available
     if (document.fonts.check && !document.fonts.check(`72px "${family}"`, testString)) {
       return false;
     }
@@ -403,7 +553,6 @@ export function verifyFontLoaded(family: string, testString = "MWQgypq190"): boo
 
 /**
  * Loads and verifies a candidate font list in batches of 20.
- * Reports progress through callback.
  */
 export async function loadAndVerifyFonts(
   fonts: { family: string }[],
@@ -416,7 +565,6 @@ export async function loadAndVerifyFonts(
 
   const unverified = fonts.filter((f) => !verifiedFontsCache.has(f.family));
 
-  // Batch append stylesheets (up to 20 per request)
   for (let i = 0; i < unverified.length; i += 20) {
     const chunk = unverified.slice(i, i + 20);
     const url =
@@ -432,17 +580,14 @@ export async function loadAndVerifyFonts(
     }
   }
 
-  // Request explicit font loading
   for (let i = 0; i < unverified.length; i += 20) {
     const chunk = unverified.slice(i, i + 20);
     const promises = chunk.map((f) =>
-      document.fonts
-        .load(`72px "${f.family}"`, text)
-        .catch(() => null)
+      document.fonts.load(`72px "${f.family}"`, text).catch(() => null)
     );
     await Promise.race([Promise.all(promises), new Promise((r) => setTimeout(r, 1200))]);
     if (onBatchLoaded) {
-      onBatchLoaded(Math.min(fonts.length, (i + 20)), fonts.length);
+      onBatchLoaded(Math.min(fonts.length, i + 20), fonts.length);
     }
   }
 
@@ -465,21 +610,21 @@ export async function loadAndVerifyFonts(
 }
 
 const featuresCache = new Map<string, FontFeatures>();
-const MAX_FEATURES_CACHE = 250;
+const MAX_FEATURES_CACHE = 400;
 
 /**
- * Renders confirmed text in candidate font at same target height as target text
- * and extracts its typographic features without stretching.
+ * Renders confirmed text in candidate font at target height and extracts features.
  */
 export function renderCandidateFeatures(
   text: string,
   family: string,
   fallback = "sans-serif",
-  targetHeight = 64
+  targetHeight = 64,
+  weight = 400
 ): FontFeatures {
-  const cacheKey = `${family}::${text}::${targetHeight}`;
+  const cacheKey = `${family}::${text}::${targetHeight}::${weight}`;
   const cached = featuresCache.get(cacheKey);
-  if (cached) return cached;
+  if (cached && !cached.isEmpty) return cached;
 
   const fontSize = Math.max(28, Math.min(96, Math.round(targetHeight * 0.85)));
   const canvasW = Math.max(600, text.length * fontSize * 1.2);
@@ -493,14 +638,13 @@ export function renderCandidateFeatures(
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvasW, canvasH);
   ctx.fillStyle = "#000000";
-  ctx.font = `${fontSize}px "${family}", ${fallback}`;
+  ctx.font = `${weight} ${fontSize}px "${family}", ${fallback}`;
   ctx.textBaseline = "middle";
   ctx.fillText(text, 20, canvasH / 2);
 
   const imgData = ctx.getImageData(0, 0, canvasW, canvasH);
   const d = imgData.data;
 
-  // Find exact rendered text bounding box
   let minX = canvasW,
     maxX = -1,
     minY = canvasH,
@@ -551,16 +695,20 @@ export function renderCandidateFeatures(
 
 /**
  * Computes calibrated visual and typographic distance between target and candidate.
- * Never lets ties silently preserve list order.
  */
-export function computeFeatureDistance(a: FontFeatures, b: FontFeatures): { distance: number; secondary: number } {
-  if (a.isEmpty || b.isEmpty) return { distance: 1.0, secondary: 1.0 };
+export function computeFeatureDistance(
+  a: FontFeatures,
+  b: FontFeatures
+): { distance: number; secondary: number } {
+  if (a.isEmpty || b.isEmpty) return { distance: Infinity, secondary: Infinity };
 
   const W = FEATURE_WEIGHTS;
 
   const aspectDiff = Math.abs(Math.log(Math.max(1e-3, a.aspect) / Math.max(1e-3, b.aspect)));
   const densityDiff = Math.abs(a.density - b.density);
-  const strokeDiff = Math.abs(a.strokeThickness - b.strokeThickness) / Math.max(0.5, (a.strokeThickness + b.strokeThickness) / 2);
+  const strokeDiff =
+    Math.abs(a.strokeThickness - b.strokeThickness) /
+    Math.max(0.5, (a.strokeThickness + b.strokeThickness) / 2);
 
   let hDiff = 0;
   for (let i = 0; i < H_POINTS; i++) {
@@ -586,23 +734,26 @@ export function computeFeatureDistance(a: FontFeatures, b: FontFeatures): { dist
     serifDiff * W.serif +
     xHeightDiff * W.xHeight;
 
-  // Secondary distance used to break ties deterministically
+  if (!Number.isFinite(mainDist)) {
+    return { distance: Infinity, secondary: Infinity };
+  }
+
   const secondary = densityDiff * 0.5 + hDiff * 0.5;
 
-  return { distance: mainDist, secondary };
+  return { distance: mainDist, secondary: Number.isFinite(secondary) ? secondary : Infinity };
 }
 
 /**
- * Maps physical distance to an absolute similarity percentage.
- * Does not force arbitrary 97% on top match.
+ * Extracts the base root prefix of a font family to ensure top result diversity
+ * (e.g., "Noto Sans JP" -> "noto sans", "DM Serif Display" -> "dm serif").
  */
-export function computeAbsoluteSimilarity(d: number): number {
-  if (d <= 0.08) return Math.round(96 - d * 75);
-  if (d <= 0.16) return Math.round(90 - (d - 0.08) * 100);
-  if (d <= 0.28) return Math.round(82 - (d - 0.16) * 100);
-  if (d <= 0.42) return Math.round(70 - (d - 0.28) * 90);
-  if (d <= 0.55) return Math.round(57 - (d - 0.42) * 80);
-  return Math.max(20, Math.round(46 - (d - 0.55) * 50));
+export function getFamilyPrefix(family: string): string {
+  const cleaned = family.toLowerCase().trim();
+  const tokens = cleaned.split(/\s+/);
+  if (tokens.length >= 2 && (tokens[0] === "noto" || tokens[0] === "dm" || tokens[0] === "source" || tokens[0] === "libre" || tokens[0] === "ibm" || tokens[0] === "pt")) {
+    return `${tokens[0]} ${tokens[1]}`;
+  }
+  return tokens[0];
 }
 
 // Backward-compatible exports
@@ -620,7 +771,10 @@ export function distance(a: any, b: any) {
   return Math.abs(a.aspect - b.aspect);
 }
 export function computeSimilarity(d: number) {
-  return computeAbsoluteSimilarity(d);
+  if (d <= 0.08) return Math.round(96 - d * 75);
+  if (d <= 0.16) return Math.round(90 - (d - 0.08) * 100);
+  if (d <= 0.28) return Math.round(82 - (d - 0.16) * 100);
+  return Math.max(20, Math.round(55 - d * 50));
 }
 export async function loadFonts(fonts: { family: string }[], text = "Hamburgefonstiv") {
   return loadAndVerifyFonts(fonts, text);
@@ -634,10 +788,13 @@ export async function similarTo(font: Font, pool: Font[]) {
     .map((candidate) => {
       const cf = renderCandidateFeatures(T, candidate.family, candidate.fallback);
       const { distance: d, secondary } = computeFeatureDistance(tf, cf);
-      return { font, candidate, d, secondary, pct: computeAbsoluteSimilarity(d) };
+      return { font, candidate, d, secondary, pct: computeSimilarity(d) };
     })
     .sort((a, b) => {
-      if (Math.abs(a.d - b.d) < 1e-5) return a.secondary - b.secondary;
+      if (Math.abs(a.d - b.d) < 1e-5) {
+        if (Math.abs(a.secondary - b.secondary) < 1e-5) return 0;
+        return a.secondary < b.secondary ? -1 : 1;
+      }
       return a.d - b.d;
     });
 

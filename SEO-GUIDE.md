@@ -1,4 +1,4 @@
-# SEO From Scratch — a guide for FontFind
+# SEO From Scratch — a guide for TypeMatcher
 
 ## 1. What SEO is
 SEO (search engine optimisation) means making it easy for Google to **find, understand and trust** your pages, so it shows them to people searching for what you offer. It has three parts:
@@ -50,7 +50,7 @@ Already done in this project: titles, descriptions, canonicals, Open Graph, site
 - Make sure the site works on a phone. Google judges the mobile version.
 - Don't leave `noindex` tags or a blocking `robots.txt` in place by accident.
 
-## 7. Content: the most important section for FontFind
+## 7. Content: the most important section for TypeMatcher
 - **Thin or duplicate pages hurt.** 600 near-identical font pages with the same template and no unique text are exactly what Google may refuse to index. Your sitemap therefore starts with only the top 50 fonts (`SITEMAP_FONT_LIMIT` in `.env`). Raise it gradually as Search Console shows those pages getting indexed.
 - **Add unique, useful text to each font page:** 2–3 original sentences on what the font feels like, where it works well (logos, body text, posters), what it pairs with, and a few honest alternatives. Hand-write them for the top fonts first. Mass-generated filler is a known way to get ignored.
 - Answer the searcher's question fast: the tool, the result and the copy button should be visible without scrolling.

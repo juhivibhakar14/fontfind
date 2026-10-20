@@ -133,7 +133,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
       setRes(r);
       if (r.text) setOverrideText(r.text);
     } catch (e: any) {
-      setErr(e?.message || "We couldn't identify the font. Try uploading a clearer image with larger text.");
+      setErr(e?.message || "We couldn't analyze the style from this image. Try uploading a clearer image with larger text.");
     } finally {
       setBusy(false);
     }
@@ -161,11 +161,11 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
 
   return (
     <div>
-      <section className="mx-auto max-w-3xl px-4 pt-14 text-center sm:pt-20">
-        <h1 className="font-display text-5xl font-semibold tracking-tight sm:text-7xl">
+      <section className="mx-auto max-w-4xl px-4 pt-14 text-center sm:pt-20">
+        <h1 className="font-display text-[clamp(1.75rem,4.5vw,3.75rem)] font-semibold tracking-tight leading-tight sm:whitespace-nowrap">
           What Font Is This?
         </h1>
-        <p className="mx-auto mt-5 max-w-xl text-lg text-mute">
+        <p className="mx-auto mt-4 max-w-xl text-base sm:text-lg text-mute">
           Upload a screenshot, logo, poster, or design and find fonts that look similar.
         </p>
       </section>
@@ -179,7 +179,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
               const f = e.dataTransfer.files[0];
               if (f) load(f);
             }}
-            className="rounded-3xl border-2 border-dashed border-line bg-card p-8 text-center sm:p-14"
+            className="rounded-3xl border-2 border-dashed border-line bg-card p-6 text-center sm:p-14"
           >
             <p className="font-display text-3xl">Aa</p>
             <p className="mt-3 text-xl font-medium">Drop an image here</p>
@@ -188,7 +188,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
               <button
                 type="button"
                 onClick={() => inp.current?.click()}
-                className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 text-bg"
+                className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm text-bg whitespace-nowrap"
               >
                 <ImagePlus className="h-4 w-4" />
                 Browse Image
@@ -196,7 +196,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
               <button
                 type="button"
                 onClick={paste}
-                className="inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2 hover:border-ink"
+                className="inline-flex items-center gap-2 rounded-lg border border-line px-4 py-2 text-sm hover:border-ink whitespace-nowrap"
               >
                 <ClipboardPaste className="h-4 w-4" />
                 Paste Image
@@ -204,7 +204,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
               <button
                 type="button"
                 onClick={example}
-                className="rounded-lg border border-line px-4 py-2 hover:border-ink"
+                className="rounded-lg border border-line px-4 py-2 text-sm hover:border-ink whitespace-nowrap"
               >
                 Try an example
               </button>
@@ -228,7 +228,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
             <div className="flex h-64 items-center justify-center overflow-hidden rounded-2xl border border-line bg-bg">
               <img
                 src={url}
-                alt="Uploaded text sample to identify"
+                alt="Uploaded text sample to analyze"
                 className="max-h-full max-w-full transition-transform"
                 style={{ transform: `rotate(${rot}deg) scale(${zoom})` }}
               />
@@ -237,12 +237,12 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
               <button
                 type="button"
                 onClick={() => setRot((rot + 90) % 360)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm hover:border-ink"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm hover:border-ink whitespace-nowrap shrink-0"
               >
                 <RotateCw className="h-3.5 w-3.5" />
                 Rotate
               </button>
-              <label className="flex min-w-[160px] flex-1 items-center gap-2 text-sm text-mute">
+              <label className="flex min-w-[140px] flex-1 items-center gap-2 text-sm text-mute">
                 Zoom
                 <input
                   type="range"
@@ -255,18 +255,18 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
                 />
               </label>
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-              <span className="text-mute">Replace image:</span>
-              <button type="button" onClick={() => inp.current?.click()} className="underline underline-offset-4">
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              <span className="text-mute shrink-0">Replace image:</span>
+              <button type="button" onClick={() => inp.current?.click()} className="underline underline-offset-4 whitespace-nowrap">
                 Upload new
               </button>
-              <button type="button" onClick={paste} className="underline underline-offset-4">
+              <button type="button" onClick={paste} className="underline underline-offset-4 whitespace-nowrap">
                 Paste
               </button>
-              <button type="button" onClick={example} className="underline underline-offset-4">
+              <button type="button" onClick={example} className="underline underline-offset-4 whitespace-nowrap">
                 Example
               </button>
-              <button type="button" onClick={clear} className="ml-auto text-mute underline underline-offset-4">
+              <button type="button" onClick={clear} className="text-mute underline underline-offset-4 whitespace-nowrap sm:ml-auto">
                 ← Start over
               </button>
             </div>
@@ -298,7 +298,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
               disabled={busy}
               className="mt-4 w-full rounded-xl bg-accent py-3 font-medium text-[var(--ai)] disabled:opacity-60 transition-opacity"
             >
-              {busy ? "Analyzing…" : "Identify Font"}
+              {busy ? "Analyzing Style…" : "Find Matching Fonts"}
             </button>
             {busy && (
               <div role="status" className="mt-3">
@@ -327,7 +327,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
         {err && (
           <div role="alert" className="mt-4 rounded-xl border border-line p-4">
             <p className="font-medium text-ink">
-              {res === null && file ? "We couldn't identify the font" : "Something's off"}
+              {res === null && file ? "We couldn't analyze the font style" : "Something's off"}
             </p>
             <p className="text-sm text-mute mt-0.5">{err}</p>
           </div>
@@ -335,7 +335,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
 
         {!file && !err && (
           <p className="mt-6 text-center text-sm text-mute">
-            <b className="text-ink">No image yet.</b> Upload a screenshot and let&apos;s find its font.
+            <b className="text-ink">No image yet.</b> Upload a screenshot and let&apos;s find matching typography.
           </p>
         )}
       </section>
@@ -383,7 +383,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
                     onClick={() => run(overrideText.trim())}
                     className="w-full sm:w-auto rounded-lg bg-accent px-5 py-2 text-sm font-medium text-white transition-opacity hover:opacity-95 disabled:opacity-50"
                   >
-                    {busy ? "Comparing…" : "Match Font"}
+                    {busy ? "Comparing…" : "Find Matching Style"}
                   </button>
                 </div>
                 <div className="mt-2 text-right">
@@ -401,13 +401,22 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
         </section>
       )}
 
+      {/* 3) HONEST LABELS & STYLE HEADINGS */}
       {res && !res.needsTextPrompt && !res.error && res.matches.length > 0 && (
         <section className="mx-auto mt-14 max-w-6xl px-4" aria-live="polite">
+          {/* One-line style summary */}
+          {res.styleEstimate && (
+            <div className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-4 py-1.5 text-xs text-mute mb-3 shadow-sm">
+              <span className="text-mute/80">Looks like:</span>
+              <b className="text-ink capitalize font-medium">{res.styleEstimate.summary}</b>
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h2 className="text-2xl font-semibold">Possible font matches</h2>
+              <h2 className="text-2xl font-semibold">Closest style matches</h2>
               <p className="text-xs text-mute mt-0.5">
-                Compared against confirmed text: <b className="text-ink">&ldquo;{res.text}&rdquo;</b>
+                Compared against text: <b className="text-ink">&ldquo;{res.text}&rdquo;</b>
                 {res.unloadedCount !== undefined && res.unloadedCount > 0 && (
                   <span className="ml-1 text-mute/80">({res.unloadedCount} fonts skipped due to network)</span>
                 )}
@@ -425,39 +434,48 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
             </button>
           </div>
 
-          {res.isWeakMatch && (
-            <div className="mt-4 rounded-xl border border-line bg-card p-3.5 text-sm text-mute">
-              <b className="text-ink">No close match found.</b> Try a clearer image or a tighter crop around the text. Below are the closest options labeled as weak matches.
-            </div>
-          )}
-
-          <p className="text-sm text-mute mt-3">
-            We found {res.matches.length} fonts that resemble the letterforms in your image.
+          <p className="text-sm text-mute mt-2">
+            Fonts in the open-source Google Fonts catalog with letterforms, weight, and proportions closest to your image.
           </p>
 
-          <ol className="mt-5 grid gap-4">
+          <ol className="mt-5 grid gap-4 items-stretch">
             {res.matches.map((m) => (
-              <li key={m.font.family} className="rounded-2xl border border-line bg-card p-5">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="text-lg font-semibold">{m.font.family}</h3>
-                  <span className={`text-sm font-medium ${res.isWeakMatch ? "text-mute" : "text-accent"}`}>
-                    {m.similarity}% similarity · {res.isWeakMatch ? "Weak match" : "Shape match"}
+              <li key={m.font.family} className="flex h-full min-w-0 flex-col rounded-2xl border border-line bg-card p-4 sm:p-5">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 min-w-0">
+                  <h3
+                    className="text-lg sm:text-xl font-semibold text-ink truncate min-w-0 max-w-full sm:max-w-[70%]"
+                    title={m.font.family}
+                  >
+                    {m.font.family}
+                  </h3>
+                  <span
+                    className={`shrink-0 rounded-full px-3 py-0.5 text-xs font-semibold whitespace-nowrap ${
+                      m.matchLabel === "Strong match"
+                        ? "bg-accent/15 text-accent border border-accent/30"
+                        : m.matchLabel === "Good match"
+                        ? "bg-ink/10 text-ink border border-line"
+                        : "bg-mute/10 text-mute border border-line"
+                    }`}
+                  >
+                    {m.matchLabel}
                   </span>
                 </div>
-                <p
-                  className="my-3 text-3xl break-words"
-                  style={{ fontFamily: `'${m.font.family}',${m.font.fallback}` }}
-                >
-                  {res.text || SAMPLE}
-                </p>
-                <p className="text-xs text-mute">
+                <div className="my-3 flex-1 min-h-[4.2rem] max-h-[4.5rem] overflow-hidden py-0.5">
+                  <p
+                    className="line-clamp-2 break-words text-[clamp(1.375rem,4vw,2rem)] leading-snug"
+                    style={{ fontFamily: `'${m.font.family}',${m.font.fallback}` }}
+                  >
+                    {res.text || SAMPLE}
+                  </p>
+                </div>
+                <p className="text-xs text-mute truncate min-w-0" title={`${m.font.category} · Google Fonts`}>
                   {m.font.category} · Google Fonts
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-auto pt-4 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setPrev(m.font)}
-                    className="rounded-lg border border-line px-3 py-1.5 text-sm hover:border-ink"
+                    className="inline-flex items-center rounded-lg border border-line px-3 py-1.5 text-sm whitespace-nowrap hover:border-ink transition-colors"
                   >
                     Preview
                   </button>
@@ -465,16 +483,16 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
                   <CopyBtn text={css(m.font)} label="Copy Code" />
                   <Link
                     href={`/fonts/${slug(m.font.family)}`}
-                    className="rounded-lg border border-line px-3 py-1.5 text-sm text-accent hover:border-ink ml-auto"
+                    className="inline-flex items-center rounded-lg border border-line px-3 py-1.5 text-sm whitespace-nowrap text-accent hover:border-ink transition-colors sm:ml-auto"
                   >
-                    View details &amp; similar →
+                    Details &amp; pairings →
                   </Link>
                 </div>
               </li>
             ))}
           </ol>
 
-          {/* Diagnostics Debug Panel (Step 1) */}
+          {/* 4) Diagnostics Debug Panel (?debug=1) */}
           {isDebug && res.debug && (
             <div className="mt-8 rounded-2xl border border-line bg-card p-5 font-mono text-xs">
               <div className="flex items-center justify-between border-b border-line pb-2 mb-3">
@@ -484,18 +502,30 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
                 </span>
                 <span className="rounded bg-accent/10 px-2 py-0.5 text-accent font-medium">Active</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4 text-mute">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4 text-mute">
                 <div>
                   <b>OCR Text:</b> <span className="text-ink">&ldquo;{res.debug.ocrText}&rdquo;</span> ({res.debug.textSource})
                 </div>
                 <div>
-                  <b>Candidate Pool:</b> <span className="text-ink">{res.debug.candidatesTotal}</span> tested
+                  <b>Estimated Style:</b> <span className="text-ink capitalize">{res.debug.styleSummary}</span>
                 </div>
                 <div>
-                  <b>Verified Loaded:</b> <span className="text-ink">{res.debug.candidatesLoaded}</span> fonts
+                  <b>Stage 1 Candidates:</b> <span className="text-ink">{res.debug.candidatesStage1Count}</span> retained of {res.debug.candidatesLoaded}
+                </div>
+                <div>
+                  <b>Estimated Classification:</b> <span className="text-ink">{res.debug.estimatedCategory} · {res.debug.estimatedWeight} · {res.debug.estimatedWidth}</span>
                 </div>
               </div>
-              <p className="font-semibold text-ink mb-1">Top 10 Ranked Fonts (Raw Distance):</p>
+              {!res.debug.isOrderAscending && (
+                <div
+                  role="alert"
+                  className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm font-semibold text-red-500"
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>WARNING: Displayed candidates are not sorted in ascending order of distance!</span>
+                </div>
+              )}
+              <p className="font-semibold text-ink mb-1">Top 10 Ranked Candidates (Stage 2 Weighted Distance):</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -503,7 +533,8 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
                       <th className="py-1 pr-3">#</th>
                       <th className="py-1 pr-3">Font Family</th>
                       <th className="py-1 pr-3">Raw Distance</th>
-                      <th className="py-1">Similarity</th>
+                      <th className="py-1 pr-3">Secondary Dist</th>
+                      <th className="py-1">Match Label</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -512,7 +543,10 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
                         <td className="py-1 pr-3 text-mute">{idx + 1}</td>
                         <td className="py-1 pr-3 font-medium text-ink">{item.family}</td>
                         <td className="py-1 pr-3 text-accent font-mono">{item.distance.toFixed(4)}</td>
-                        <td className="py-1">{item.similarity}%</td>
+                        <td className="py-1 pr-3 text-mute font-mono">
+                          {Number.isFinite(item.secondary) ? item.secondary.toFixed(4) : "—"}
+                        </td>
+                        <td className="py-1 font-semibold">{item.label}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -523,13 +557,14 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
 
           <AdSlot id="home-results" />
 
-          <h2 className="mt-12 text-2xl font-semibold">Similar Fonts</h2>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* 3) "More fonts in a similar style" */}
+          <h2 className="mt-12 text-2xl font-semibold">More fonts in a similar style</h2>
+          <div className="mt-5 grid gap-4 items-stretch sm:grid-cols-2 lg:grid-cols-3">
             {res.similar.map((m) => (
               <FontCard
                 key={m.font.family}
                 font={m.font}
-                sim={m.similarity}
+                label={m.matchLabel}
                 text={res.text || "The quick brown fox"}
                 onPreview={setPrev}
               />
