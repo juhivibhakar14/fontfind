@@ -25,14 +25,18 @@ import FontCard from "./font-card";
 import FontPreview, { CopyBtn } from "./font-preview";
 import AdSlot from "./ad-slot";
 
-async function rotated(b: Blob, deg: number) {
+async function rotated(b: Blob, deg: number): Promise<Blob> {
   if (!deg) return b;
   const m = await createImageBitmap(b);
   const sw = deg % 180 !== 0;
   const c = document.createElement("canvas");
   c.width = sw ? m.height : m.width;
   c.height = sw ? m.width : m.height;
-  const x = c.getContext("2d")!;
+  const x = c.getContext("2d");
+  if (!x) {
+    m.close();
+    return b;
+  }
   x.translate(c.width / 2, c.height / 2);
   x.rotate((deg * Math.PI) / 180);
   x.drawImage(m, -m.width / 2, -m.height / 2);
@@ -41,7 +45,7 @@ async function rotated(b: Blob, deg: number) {
     c.toBlob((blob) => {
       c.width = 0;
       c.height = 0;
-      r(blob!);
+      r(blob ?? b);
     }, "image/png"),
   );
 }
@@ -292,7 +296,8 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
     const c = document.createElement("canvas");
     c.width = 800;
     c.height = 240;
-    const x = c.getContext("2d")!;
+    const x = c.getContext("2d");
+    if (!x) return;
     x.fillStyle = "#fff";
     x.fillRect(0, 0, 800, 240);
     x.fillStyle = "#111";

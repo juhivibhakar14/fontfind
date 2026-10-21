@@ -60,11 +60,27 @@ export interface FontIdentifierService {
   identify(image: Blob, candidates: Font[], options?: IdentifyOptions): Promise<IdentifyResult>;
 }
 
-let sharedWorker: any = null;
-let workerPromise: Promise<any> | null = null;
+import type { Worker } from "tesseract.js";
+
+let sharedWorker: Worker | null = null;
+let workerPromise: Promise<Worker> | null = null;
 let isOcrBusy = false;
 
-async function getSharedWorker() {
+export async function terminateSharedWorker(): Promise<void> {
+  if (sharedWorker) {
+    try {
+      await sharedWorker.terminate();
+    } catch {
+      // Ignore termination errors
+    } finally {
+      sharedWorker = null;
+      workerPromise = null;
+      isOcrBusy = false;
+    }
+  }
+}
+
+async function getSharedWorker(): Promise<Worker> {
   if (sharedWorker) return sharedWorker;
   if (!workerPromise) {
     workerPromise = (async () => {

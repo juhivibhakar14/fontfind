@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { FONTS } from "@/lib/fonts/data";
+import { FONTS, type Font } from "@/lib/fonts/data";
 import { fontIdentifierService, type FontMatch } from "@/services/fontIdentifierService";
 import { useGoogleFonts } from "@/lib/useGoogleFonts";
 
@@ -121,8 +121,8 @@ export default function TestFontsClient() {
   const [allUniqueTop3, setAllUniqueTop3] = useState<boolean | null>(null);
 
   // Pre-load all test fonts into document
-  const testFonts = TEST_CASES.map((tc) => FONTS.find((f) => f.family === tc.family)!).filter(
-    Boolean,
+  const testFonts = TEST_CASES.map((tc) => FONTS.find((f) => f.family === tc.family)).filter(
+    (f): f is Font => f !== undefined,
   );
   useGoogleFonts(testFonts);
 
@@ -157,7 +157,8 @@ export default function TestFontsClient() {
       const c = document.createElement("canvas");
       c.width = 750;
       c.height = 160;
-      const ctx = c.getContext("2d")!;
+      const ctx = c.getContext("2d");
+      if (!ctx) continue;
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, c.width, c.height);
       ctx.fillStyle = "#111111";
@@ -165,7 +166,8 @@ export default function TestFontsClient() {
       ctx.textBaseline = "middle";
       ctx.fillText(tc.text, 30, c.height / 2);
 
-      const blob = await new Promise<Blob>((resolve) => c.toBlob((b) => resolve(b!), "image/png"));
+      const blob = await new Promise<Blob | null>((resolve) => c.toBlob(resolve, "image/png"));
+      if (!blob) continue;
       const imageUrl = URL.createObjectURL(blob);
 
       // Run style identification
