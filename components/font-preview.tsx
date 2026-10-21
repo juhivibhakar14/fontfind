@@ -24,36 +24,43 @@ function CloseIcon() {
 export default function FontPreview({ font, onClose }: { font: Font; onClose: () => void }) {
   const [text, setText] = useState("Your brand deserves better typography.");
   const [size, setSize] = useState(44);
-  const [w, setW] = useState(font.weights.includes(400) ? 400 : font.weights[0]);
-  const [ls, setLs] = useState(0);
-  const [lh, setLh] = useState(1.3);
-  const [tf, setTf] = useState<"none" | "uppercase" | "lowercase">("none");
-  const [al, setAl] = useState<"left" | "center" | "right">("left");
-  const [use, setUse] = useState(false);
+  const [weight, setWeight] = useState(font.weights.includes(400) ? 400 : font.weights[0]);
+  const [letterSpacing, setLetterSpacing] = useState(0);
+  const [lineHeight, setLineHeight] = useState(1.3);
+  const [textTransform, setTextTransform] = useState<"none" | "uppercase" | "lowercase">("none");
+  const [textAlign, setTextAlign] = useState<"left" | "center" | "right">("left");
+  const [showEmbed, setShowEmbed] = useState(false);
 
   useEffect(() => {
-    const l = document.createElement("link");
-    l.rel = "stylesheet";
-    l.href = importUrl(font);
-    document.head.appendChild(l);
+    const linkElement = document.createElement("link");
+    linkElement.rel = "stylesheet";
+    linkElement.href = importUrl(font);
+    document.head.appendChild(linkElement);
     return () => {
-      l.remove();
+      linkElement.remove();
     };
   }, [font]);
 
-  const rule = `font-family: '${font.family}', ${font.fallback};\nfont-weight: ${w};`;
-  const sl = (l: string, v: number, s: (n: number) => void, min: number, max: number, step = 1) => (
+  const rule = `font-family: '${font.family}', ${font.fallback};\nfont-weight: ${weight};`;
+  const renderSlider = (
+    label: string,
+    value: number,
+    setValue: (n: number) => void,
+    min: number,
+    max: number,
+    step = 1,
+  ) => (
     <label className="flex flex-col gap-1 text-xs text-mute min-w-0">
       <span className="truncate">
-        {l}: {v}
+        {label}: {value}
       </span>
       <input
         type="range"
         min={min}
         max={max}
         step={step}
-        value={v}
-        onChange={(e) => s(+e.target.value)}
+        value={value}
+        onChange={(e) => setValue(+e.target.value)}
         className="w-full accent-[var(--accent)]"
       />
     </label>
@@ -99,28 +106,35 @@ export default function FontPreview({ font, onClose }: { font: Font; onClose: ()
           style={{
             fontFamily: `'${font.family}',${font.fallback}`,
             fontSize: size,
-            fontWeight: w,
-            letterSpacing: `${ls}px`,
-            lineHeight: lh,
-            textTransform: tf,
-            textAlign: al,
+            fontWeight: weight,
+            letterSpacing: `${letterSpacing}px`,
+            lineHeight: lineHeight,
+            textTransform,
+            textAlign,
           }}
         >
           {text || "Type your text..."}
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-4">
-          {sl("Size", size, setSize, 12, 120)}
-          {sl("Weight", w, setW, font.weights[0], font.weights[font.weights.length - 1], 100)}
-          {sl("Spacing", ls, setLs, -2, 12, 0.5)}
-          {sl("Line height", lh, setLh, 1, 2, 0.1)}
+          {renderSlider("Size", size, setSize, 12, 120)}
+          {renderSlider(
+            "Weight",
+            weight,
+            setWeight,
+            font.weights[0],
+            font.weights[font.weights.length - 1],
+            100,
+          )}
+          {renderSlider("Spacing", letterSpacing, setLetterSpacing, -2, 12, 0.5)}
+          {renderSlider("Line height", lineHeight, setLineHeight, 1, 2, 0.1)}
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2 text-sm">
           <select
             aria-label="Case"
-            value={tf}
-            onChange={(e) => setTf(e.target.value as "none" | "uppercase" | "lowercase")}
+            value={textTransform}
+            onChange={(e) => setTextTransform(e.target.value as "none" | "uppercase" | "lowercase")}
             className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-xs sm:text-sm text-ink focus:outline-none focus:ring-1 focus:ring-accent"
           >
             <option value="none">Normal case</option>
@@ -129,8 +143,8 @@ export default function FontPreview({ font, onClose }: { font: Font; onClose: ()
           </select>
           <select
             aria-label="Alignment"
-            value={al}
-            onChange={(e) => setAl(e.target.value as "left" | "center" | "right")}
+            value={textAlign}
+            onChange={(e) => setTextAlign(e.target.value as "left" | "center" | "right")}
             className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-xs sm:text-sm text-ink focus:outline-none focus:ring-1 focus:ring-accent"
           >
             <option value="left">Left</option>
@@ -144,14 +158,14 @@ export default function FontPreview({ font, onClose }: { font: Font; onClose: ()
           <CopyBtn text={rule} label="Copy Code" />
           <button
             type="button"
-            onClick={() => setUse(!use)}
+            onClick={() => setShowEmbed(!showEmbed)}
             className="inline-flex items-center rounded-lg bg-ink px-3 py-1.5 text-sm font-medium text-bg whitespace-nowrap hover:opacity-90 transition-opacity"
           >
             Use Font
           </button>
         </div>
 
-        {use && (
+        {showEmbed && (
           <pre className="mt-3 overflow-x-auto rounded-lg border border-line p-3 text-xs">
             {`<link rel="stylesheet" href="${importUrl(font)}">\n\n/* CSS */\n${rule}`}
           </pre>

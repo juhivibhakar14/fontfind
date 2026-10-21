@@ -3,20 +3,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Moon, Sun } from "lucide-react";
 export default function Header() {
-  const p = usePathname();
-  const toggle = () => {
-    const d = document.documentElement.classList.toggle("dark");
+  const pathname = usePathname();
+  const toggleTheme = () => {
+    const isDark = document.documentElement.classList.toggle("dark");
     try {
-      localStorage.setItem("theme", d ? "dark" : "light");
-    } catch {}
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+    } catch {
+      // Ignore localStorage access failure (e.g. private mode)
+    }
   };
-  const nav = (h: string, l: string) => (
+  const renderNavLink = (href: string, label: string) => (
     <Link
-      href={h}
-      aria-current={p === h ? "page" : undefined}
-      className={`rounded-md px-2 py-1 text-sm ${p === h ? "text-ink" : "text-mute hover:text-ink"}`}
+      href={href}
+      aria-current={pathname === href ? "page" : undefined}
+      className={`rounded-md px-2 py-1 text-sm ${pathname === href ? "text-ink" : "text-mute hover:text-ink"}`}
     >
-      {l}
+      {label}
     </Link>
   );
   return (
@@ -30,10 +32,10 @@ export default function Header() {
           Type<span className="italic text-accent">Matcher</span>
         </Link>
         <nav className="flex items-center gap-1" aria-label="Main">
-          {nav("/", "Match Font")}
-          {nav("/fonts", "Explore Fonts")}
+          {renderNavLink("/", "Match Font")}
+          {renderNavLink("/fonts", "Explore Fonts")}
           <button
-            onClick={toggle}
+            onClick={toggleTheme}
             aria-label="Toggle theme"
             className="ml-2 rounded-md p-2 text-mute hover:text-ink"
           >

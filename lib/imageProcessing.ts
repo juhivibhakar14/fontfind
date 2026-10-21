@@ -812,6 +812,12 @@ export function getFamilyPrefix(family: string): string {
   }
   return tokens[0];
 }
+/**
+ * Computes a human-readable similarity percentage (0-100) from a raw feature distance.
+ *
+ * @param d - The calculated feature distance between font glyph representations.
+ * @returns An integer percentage representing font similarity.
+ */
 export function computeSimilarity(d: number): number {
   if (d <= 0.08) return Math.round(96 - d * 75);
   if (d <= 0.16) return Math.round(90 - (d - 0.08) * 100);
@@ -819,6 +825,13 @@ export function computeSimilarity(d: number): number {
   return Math.max(20, Math.round(55 - d * 50));
 }
 
+/**
+ * Finds similar fonts from a candidate pool based on glyph feature comparison.
+ *
+ * @param font - Target font to find matches for.
+ * @param pool - Candidate font pool to compare against.
+ * @returns Array of candidates ordered by feature similarity with match percentage.
+ */
 export async function similarTo(font: Font, pool: Font[]) {
   const T = "Hamburgefonstiv";
   await loadAndVerifyFonts([font, ...pool], T);
