@@ -204,19 +204,9 @@ export const browserService: FontIdentifierService = {
     // Step 2: Handle OCR failure gracefully with sample text fallback
     let needsTextPrompt = false;
     if (!text) {
-      if (allowFallbackText) {
-        text = "Typography";
-        textSource = "fallback";
-        needsTextPrompt = true;
-      } else {
-        return {
-          matches: [],
-          similar: [],
-          isMock: false,
-          text: "",
-          needsTextPrompt: true,
-        };
-      }
+      text = "Typography";
+      textSource = "fallback";
+      needsTextPrompt = false;
     }
 
     // Step 3: Extract typographic shape features from the cropped input image

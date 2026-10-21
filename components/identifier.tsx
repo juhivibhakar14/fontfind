@@ -274,7 +274,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
     setProgress(null);
   };
 
-  const run = async (customText?: string, allowFallback = false) => {
+  const run = async (customText?: string, allowFallback = true) => {
     if (busy || !file) return;
     const currentAnalysisId = ++analysisIdRef.current;
     setBusy(true);
