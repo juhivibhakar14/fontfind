@@ -348,12 +348,16 @@ export function estimateStyle(features: FontFeatures, textLength = 6): StyleEsti
   let categoryConfidence: "high" | "low" = "high";
   let allowedCategories: string[] = ["Sans Serif"];
 
-  // Only classify as Script/Handwriting if there is clear connected cursive (valleys don't drop to 0)
+  // Only classify as Script/Handwriting if there is clear connected cursive with high contrast,
+  // low serif score, and non-bold density (script fonts are flowing with density < 0.35).
   const isConnectedCursive =
     safeLength >= 4 &&
-    hMetrics.minValley > 0.1 &&
+    hMetrics.minValley > 0.18 &&
     hMetrics.valleysCount === 0 &&
-    features.contrast > 1.25;
+    features.contrast > 1.5 &&
+    features.density < 0.35 &&
+    features.strokeThickness < 0.08 &&
+    features.serifScore < 0.12;
 
   if (isConnectedCursive) {
     category = "Script/Handwriting";

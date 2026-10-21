@@ -113,9 +113,66 @@ function fontSupportsWeight(font: Font, allowedWeights: WeightClass[]): boolean 
   return false;
 }
 
+async function prepareImageForOcr(image: Blob): Promise<Blob> {
+  let bmp: ImageBitmap | null = null;
+  try {
+    bmp = await createImageBitmap(image);
+    const w = bmp.width;
+    const h = bmp.height;
+    if (w < 2 || h < 2) return image;
+
+    const scale = Math.min(2, Math.max(1, 1200 / Math.max(w, h)));
+    const targetW = Math.round(w * scale);
+    const targetH = Math.round(h * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return image;
+
+    ctx.drawImage(bmp, 0, 0, targetW, targetH);
+    const imgData = ctx.getImageData(0, 0, targetW, targetH);
+    const d = imgData.data;
+
+    let borderLumSum = 0;
+    let borderCount = 0;
+    for (let y = 0; y < targetH; y += 4) {
+      for (let x = 0; x < targetW; x += 4) {
+        if (x < 10 || x >= targetW - 10 || y < 10 || y >= targetH - 10) {
+          const idx = (y * targetW + x) * 4;
+          const lum = 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
+          borderLumSum += lum;
+          borderCount++;
+        }
+      }
+    }
+    const avgBorderLum = borderCount > 0 ? borderLumSum / borderCount : 255;
+    const isDarkBg = avgBorderLum < 128;
+
+    // If dark background, invert so text is dark on white for higher OCR accuracy
+    if (isDarkBg) {
+      for (let i = 0; i < d.length; i += 4) {
+        d[i] = 255 - d[i];
+        d[i + 1] = 255 - d[i + 1];
+        d[i + 2] = 255 - d[i + 2];
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    return await new Promise<Blob>((resolve) => {
+      canvas.toBlob((blob) => resolve(blob ?? image), "image/png");
+    });
+  } catch {
+    return image;
+  } finally {
+    bmp?.close();
+  }
+}
+
 export const browserService: FontIdentifierService = {
   async identify(image, candidates, options = {}) {
-    const { overrideText, allowFallbackText = false, onProgress, debug = false } = options;
+    const { overrideText, allowFallbackText = true, onProgress, debug = false } = options;
     let text = overrideText?.trim() || "";
     let textSource: "manual" | "auto" | "fallback" = "manual";
 
@@ -125,7 +182,8 @@ export const browserService: FontIdentifierService = {
         isOcrBusy = true;
         try {
           const w = await getSharedWorker();
-          const { data } = await w.recognize(image);
+          const preparedBlob = await prepareImageForOcr(image);
+          const { data } = await w.recognize(preparedBlob);
           const cleaned = data.text
             .replace(/[^a-zA-Z0-9 ]/g, " ")
             .replace(/\s+/g, " ")
@@ -143,11 +201,13 @@ export const browserService: FontIdentifierService = {
       }
     }
 
-    // Step 2: Handle OCR failure explicitly
+    // Step 2: Handle OCR failure gracefully with sample text fallback
+    let needsTextPrompt = false;
     if (!text) {
       if (allowFallbackText) {
         text = "Typography";
         textSource = "fallback";
+        needsTextPrompt = true;
       } else {
         return {
           matches: [],
@@ -273,16 +333,16 @@ export const browserService: FontIdentifierService = {
           const isFontScript = font.category === "Script" || font.category === "Handwriting";
           const isTargetScript = styleEstimate.category === "Script/Handwriting";
           if (isFontScript && !isTargetScript) {
-            // Heavy penalty: prevent cursive/script fonts from appearing for standard text
-            categoryAdjustment = 0.35;
+            // Strong penalty: prevent cursive/script fonts from appearing for standard text
+            categoryAdjustment = 1.5;
           } else if (!isFontScript && isTargetScript) {
-            categoryAdjustment = 0.25;
+            categoryAdjustment = 0.5;
           } else if (styleEstimate.category === "Serif" && font.category === "Sans Serif") {
-            categoryAdjustment = 0.08;
+            categoryAdjustment = 0.12;
           } else if (styleEstimate.category === "Sans Serif" && font.category === "Serif") {
-            categoryAdjustment = 0.08;
+            categoryAdjustment = 0.12;
           } else {
-            categoryAdjustment = styleEstimate.categoryConfidence === "high" ? 0.06 : 0.03;
+            categoryAdjustment = styleEstimate.categoryConfidence === "high" ? 0.08 : 0.04;
           }
         }
         const finalD = safeRawD + categoryAdjustment;
@@ -309,11 +369,26 @@ export const browserService: FontIdentifierService = {
       throw new Error("No candidate fonts could be compared.");
     }
 
+    // Prioritize candidates matching the classified style
+    const isTargetScript = styleEstimate.category === "Script/Handwriting";
+    const categoryScored = scored.filter((item) => matchCategory(item.font));
+    const nonCategoryScored = isTargetScript
+      ? scored.filter((item) => !matchCategory(item.font))
+      : scored.filter(
+          (item) =>
+            !matchCategory(item.font) &&
+            item.font.category !== "Script" &&
+            item.font.category !== "Handwriting",
+        );
+
+    // Candidates ordered with matching category first so top 3 always match classified style
+    const candidateOrder = [...categoryScored, ...nonCategoryScored];
+
     // Diversity: Ensure no near-duplicate family prefixes in top matches
     const seenRoots = new Set<string>();
     const diverseMatches: typeof scored = [];
 
-    for (const item of scored) {
+    for (const item of candidateOrder) {
       const root = getFamilyPrefix(item.font.family);
       if (!seenRoots.has(root)) {
         seenRoots.add(root);
@@ -324,22 +399,13 @@ export const browserService: FontIdentifierService = {
 
     // Fill remaining if diversity filter was overly aggressive
     if (diverseMatches.length < 9) {
-      for (const item of scored) {
+      for (const item of candidateOrder) {
         if (!diverseMatches.includes(item)) {
           diverseMatches.push(item);
         }
         if (diverseMatches.length >= 9) break;
       }
     }
-
-    // Ensure diverseMatches is sorted strictly ascending by distance
-    diverseMatches.sort((a, b) => {
-      if (Math.abs(a.d - b.d) < 1e-5) {
-        if (Math.abs(a.secondary - b.secondary) < 1e-5) return 0;
-        return a.secondary < b.secondary ? -1 : 1;
-      }
-      return a.d - b.d;
-    });
 
     const toMatch = (item: (typeof scored)[0]): FontMatch => ({
       font: item.font,

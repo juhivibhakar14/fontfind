@@ -557,8 +557,8 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
         </section>
       )}
 
-      {/* When OCR cannot extract text and none was typed, prompt user explicitly */}
-      {res && res.needsTextPrompt && (
+      {/* When OCR cannot extract text and no matches could be generated, prompt user */}
+      {res && res.needsTextPrompt && res.matches.length === 0 && (
         <section className="mx-auto mt-8 max-w-3xl px-4">
           <div className="rounded-2xl border border-line bg-card p-5">
             <div className="flex items-start gap-3">
@@ -605,13 +605,22 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
       )}
 
       {/* 3) HONEST LABELS & STYLE HEADINGS */}
-      {res && !res.needsTextPrompt && !res.error && res.matches.length > 0 && (
+      {res && !res.error && res.matches.length > 0 && (
         <section className="mx-auto mt-14 max-w-6xl px-4" aria-live="polite">
           {/* One-line style summary */}
           {res.styleEstimate && (
             <div className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-4 py-1.5 text-xs text-mute mb-3 shadow-sm">
               <span className="text-mute/80">Looks like:</span>
               <b className="text-ink capitalize font-medium">{res.styleEstimate.summary}</b>
+            </div>
+          )}
+
+          {res.textSource === "fallback" && (
+            <div className="mb-4 rounded-xl border border-line bg-card p-3 text-xs text-mute flex items-center justify-between gap-3">
+              <span>
+                💡 Matched by visual letterform shape and proportions. To match specific letters,
+                enter the word in the search box above.
+              </span>
             </div>
           )}
 
