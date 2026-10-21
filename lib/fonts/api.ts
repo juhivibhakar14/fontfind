@@ -1,6 +1,25 @@
-import {FONTS,type Font,type Cat,type Mood} from "./data";
-const CAT:Record<string,Cat>={"sans-serif":"Sans Serif",serif:"Serif",display:"Display",monospace:"Monospace",handwriting:"Handwriting"};
-const MOOD:Record<Cat,Mood[]>={"Sans Serif":["Modern","Minimal","Professional"],Serif:["Elegant","Professional"],Display:["Playful","Retro","Luxury"],Monospace:["Modern","Professional"],Handwriting:["Playful"],Script:["Elegant","Luxury","Retro"]};
+import { FONTS, type Font, type Cat, type Mood } from "./data";
+const CAT: Record<string, Cat> = {
+  "sans-serif": "Sans Serif",
+  serif: "Serif",
+  display: "Display",
+  monospace: "Monospace",
+  handwriting: "Handwriting",
+};
+const MOOD: Record<Cat, Mood[]> = {
+  "Sans Serif": ["Modern", "Minimal", "Professional"],
+  Serif: ["Elegant", "Professional"],
+  Display: ["Playful", "Retro", "Luxury"],
+  Monospace: ["Modern", "Professional"],
+  Handwriting: ["Playful"],
+  Script: ["Elegant", "Luxury", "Retro"],
+};
+interface GoogleFontItem {
+  family: string;
+  category: string;
+  variants?: string[];
+}
+
 let cachedFonts: Font[] | null = null;
 
 export async function getFonts(): Promise<Font[]> {
@@ -13,7 +32,7 @@ export async function getFonts(): Promise<Font[]> {
   try {
     const r = await fetch(
       `https://www.googleapis.com/webfonts/v1/webfonts?sort=popularity&key=${key}`,
-      { next: { revalidate: 86400 } }
+      { next: { revalidate: 86400 } },
     );
     if (!r.ok) {
       cachedFonts = FONTS;
@@ -21,16 +40,14 @@ export async function getFonts(): Promise<Font[]> {
     }
     const known = new Map(FONTS.map((f) => [f.family, f]));
     const data = await r.json();
-    const items = (data.items as any[]) || [];
+    const items: GoogleFontItem[] = Array.isArray(data?.items) ? data.items : [];
     const list: Font[] = items.slice(0, 600).map((i): Font => {
       const k = known.get(i.family);
       if (k) return k;
       let category = CAT[i.category] ?? "Sans Serif";
       if (
         category === "Handwriting" &&
-        /script|vibes|allura|satisfy|sacramento|parisienne|cookie|yellowtail/i.test(
-          i.family
-        )
+        /script|vibes|allura|satisfy|sacramento|parisienne|cookie|yellowtail/i.test(i.family)
       ) {
         category = "Script";
       }
@@ -38,7 +55,7 @@ export async function getFonts(): Promise<Font[]> {
         ...new Set(
           (i.variants as string[])
             .map((v) => (v === "regular" ? 400 : /^\d+$/.test(v) ? +v : 0))
-            .filter(Boolean)
+            .filter(Boolean),
         ),
       ].sort((a, b) => a - b);
       return {
@@ -50,10 +67,10 @@ export async function getFonts(): Promise<Font[]> {
           category === "Serif"
             ? "serif"
             : category === "Monospace"
-            ? "monospace"
-            : /Hand|Script/.test(category)
-            ? "cursive"
-            : "sans-serif",
+              ? "monospace"
+              : /Hand|Script/.test(category)
+                ? "cursive"
+                : "sans-serif",
       };
     });
     cachedFonts = list;

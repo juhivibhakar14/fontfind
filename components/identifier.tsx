@@ -13,7 +13,11 @@ import {
   Sparkles,
   Lightbulb,
 } from "lucide-react";
-import { fontIdentifierService, preloadOcrWorker, type IdentifyResult } from "@/services/fontIdentifierService";
+import {
+  fontIdentifierService,
+  preloadOcrWorker,
+  type IdentifyResult,
+} from "@/services/fontIdentifierService";
 import { loadAndVerifyFonts } from "@/lib/imageProcessing";
 import { useGoogleFonts } from "@/lib/useGoogleFonts";
 import { slug, css, type Font } from "@/lib/fonts/data";
@@ -38,7 +42,7 @@ async function rotated(b: Blob, deg: number) {
       c.width = 0;
       c.height = 0;
       r(blob!);
-    }, "image/png")
+    }, "image/png"),
   );
 }
 
@@ -58,7 +62,8 @@ function ScreenshotGuidelines() {
             Tips for Best Match Results
           </h2>
           <p className="text-xs sm:text-sm text-mute">
-            Font matching analyzes letter curves, thickness, and serifs. Follow these tips to get the closest matches:
+            Font matching analyzes letter curves, thickness, and serifs. Follow these tips to get
+            the closest matches:
           </p>
         </div>
       </div>
@@ -72,20 +77,40 @@ function ScreenshotGuidelines() {
           </div>
           <ul className="space-y-2.5 text-xs sm:text-sm text-ink/90 leading-relaxed">
             <li className="flex items-start gap-2">
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0 mt-0.5">•</span>
-              <span><strong>1 to 4 clear words:</strong> Crop closely around a single title or headline (e.g. &ldquo;Research Engineer&rdquo;) rather than an entire full-page screenshot.</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0 mt-0.5">
+                •
+              </span>
+              <span>
+                <strong>1 to 4 clear words:</strong> Crop closely around a single title or headline
+                (e.g. &ldquo;Research Engineer&rdquo;) rather than an entire full-page screenshot.
+              </span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0 mt-0.5">•</span>
-              <span><strong>Plain, high-contrast background:</strong> Dark text on a clean light/white background, or crisp white text on solid dark.</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0 mt-0.5">
+                •
+              </span>
+              <span>
+                <strong>Plain, high-contrast background:</strong> Dark text on a clean light/white
+                background, or crisp white text on solid dark.
+              </span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0 mt-0.5">•</span>
-              <span><strong>Large, sharp letters:</strong> Text should be at least 30–60px tall so serifs, stroke thickness, and curves are clearly visible.</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0 mt-0.5">
+                •
+              </span>
+              <span>
+                <strong>Large, sharp letters:</strong> Text should be at least 30–60px tall so
+                serifs, stroke thickness, and curves are clearly visible.
+              </span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0 mt-0.5">•</span>
-              <span><strong>Horizontal & flat:</strong> Straight text without steep 3D perspective or circular wrapping.</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0 mt-0.5">
+                •
+              </span>
+              <span>
+                <strong>Horizontal & flat:</strong> Straight text without steep 3D perspective or
+                circular wrapping.
+              </span>
             </li>
           </ul>
         </div>
@@ -99,19 +124,31 @@ function ScreenshotGuidelines() {
           <ul className="space-y-2.5 text-xs sm:text-sm text-ink/90 leading-relaxed">
             <li className="flex items-start gap-2">
               <span className="text-rose-600 dark:text-rose-400 font-bold shrink-0 mt-0.5">•</span>
-              <span><strong>Full-page / busy screenshots:</strong> Pages with menus, profile pictures, and 10+ different fonts confuse the scanner.</span>
+              <span>
+                <strong>Full-page / busy screenshots:</strong> Pages with menus, profile pictures,
+                and 10+ different fonts confuse the scanner.
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-rose-600 dark:text-rose-400 font-bold shrink-0 mt-0.5">•</span>
-              <span><strong>Text touching logos or icons:</strong> Graphic icons right next to letters can be mistakenly merged into the font&apos;s shape.</span>
+              <span>
+                <strong>Text touching logos or icons:</strong> Graphic icons right next to letters
+                can be mistakenly merged into the font&apos;s shape.
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-rose-600 dark:text-rose-400 font-bold shrink-0 mt-0.5">•</span>
-              <span><strong>Text over photos or busy textures:</strong> Gradients, photographic backgrounds, and patterns make letter outlines hard to isolate.</span>
+              <span>
+                <strong>Text over photos or busy textures:</strong> Gradients, photographic
+                backgrounds, and patterns make letter outlines hard to isolate.
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-rose-600 dark:text-rose-400 font-bold shrink-0 mt-0.5">•</span>
-              <span><strong>Tiny or blurry text:</strong> Low-resolution screenshots lack the pixel detail needed to measure font weights accurately.</span>
+              <span>
+                <strong>Tiny or blurry text:</strong> Low-resolution screenshots lack the pixel
+                detail needed to measure font weights accurately.
+              </span>
             </li>
           </ul>
         </div>
@@ -153,8 +190,12 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
     return cat === categoryFilter;
   };
 
-  const displayedMatches = res ? res.matches.filter((m) => matchCategoryFilter(m.font.category)) : [];
-  const displayedSimilarMatches = res ? res.similar.filter((m) => matchCategoryFilter(m.font.category)) : [];
+  const displayedMatches = res
+    ? res.matches.filter((m) => matchCategoryFilter(m.font.category))
+    : [];
+  const displayedSimilarMatches = res
+    ? res.similar.filter((m) => matchCategoryFilter(m.font.category))
+    : [];
 
   const all = res ? [...res.matches, ...res.similar].map((m) => m.font) : [];
   useGoogleFonts(all);
@@ -236,8 +277,12 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
       });
       setRes(r);
       if (r.text) setOverrideText(r.text);
-    } catch (e: any) {
-      setErr(e?.message || "We couldn't analyze the style from this image. Try uploading a clearer image with larger text.");
+    } catch (e: unknown) {
+      setErr(
+        e instanceof Error
+          ? e.message
+          : "We couldn't analyze the style from this image. Try uploading a clearer image with larger text.",
+      );
     } finally {
       setBusy(false);
     }
@@ -330,6 +375,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
         ) : (
           <div className="rounded-3xl border border-line bg-card p-4">
             <div className="flex h-64 items-center justify-center overflow-hidden rounded-2xl border border-line bg-bg">
+              {/* eslint-disable-next-line @next/next/no-img-element -- client-side blob object URL cannot use next/image */}
               <img
                 src={url}
                 alt="Uploaded text sample to analyze"
@@ -361,16 +407,32 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
               <span className="text-mute shrink-0">Replace image:</span>
-              <button type="button" onClick={() => inp.current?.click()} className="underline underline-offset-4 whitespace-nowrap">
+              <button
+                type="button"
+                onClick={() => inp.current?.click()}
+                className="underline underline-offset-4 whitespace-nowrap"
+              >
                 Upload new
               </button>
-              <button type="button" onClick={paste} className="underline underline-offset-4 whitespace-nowrap">
+              <button
+                type="button"
+                onClick={paste}
+                className="underline underline-offset-4 whitespace-nowrap"
+              >
                 Paste
               </button>
-              <button type="button" onClick={example} className="underline underline-offset-4 whitespace-nowrap">
+              <button
+                type="button"
+                onClick={example}
+                className="underline underline-offset-4 whitespace-nowrap"
+              >
                 Example
               </button>
-              <button type="button" onClick={clear} className="text-mute underline underline-offset-4 whitespace-nowrap sm:ml-auto">
+              <button
+                type="button"
+                onClick={clear}
+                className="text-mute underline underline-offset-4 whitespace-nowrap sm:ml-auto"
+              >
                 ← Start over
               </button>
             </div>
@@ -380,13 +442,17 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
               <div className="leading-relaxed">
                 <span className="font-semibold text-ink">Tip for busy screenshots:</span>{" "}
                 <span className="text-mute">
-                  If your image has multiple lines or words, type the exact word you want to match in the box below so the scanner focuses on its letterforms.
+                  If your image has multiple lines or words, type the exact word you want to match
+                  in the box below so the scanner focuses on its letterforms.
                 </span>
               </div>
             </div>
 
             <div className="mt-4">
-              <label htmlFor="text-override-input" className="block text-xs font-medium text-mute mb-1">
+              <label
+                htmlFor="text-override-input"
+                className="block text-xs font-medium text-mute mb-1"
+              >
                 Text in image (optional — leave blank to auto-detect with OCR):
               </label>
               <input
@@ -429,7 +495,10 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
                         progress && progress.total > 0
                           ? `${Math.min(100, Math.round((progress.loaded / progress.total) * 100))}%`
                           : "35%",
-                      animation: progress && progress.loaded > 0 ? "none" : "sweep 1.1s ease-in-out infinite",
+                      animation:
+                        progress && progress.loaded > 0
+                          ? "none"
+                          : "sweep 1.1s ease-in-out infinite",
                     }}
                   />
                 </div>
@@ -476,7 +545,8 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
                   We couldn&apos;t read the letters automatically
                 </h3>
                 <p className="mt-1 text-xs text-mute leading-relaxed">
-                  Automatic OCR couldn&apos;t extract text from this image clearly. Type the word or letters visible in the image so we can compare their shapes with Google Fonts:
+                  Automatic OCR couldn&apos;t extract text from this image clearly. Type the word or
+                  letters visible in the image so we can compare their shapes with Google Fonts:
                 </p>
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row items-center">
                   <input
@@ -528,7 +598,9 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
               <p className="text-xs text-mute mt-0.5">
                 Compared against text: <b className="text-ink">&ldquo;{res.text}&rdquo;</b>
                 {res.unloadedCount !== undefined && res.unloadedCount > 0 && (
-                  <span className="ml-1 text-mute/80">({res.unloadedCount} fonts skipped due to network)</span>
+                  <span className="ml-1 text-mute/80">
+                    ({res.unloadedCount} fonts skipped due to network)
+                  </span>
                 )}
               </p>
             </div>
@@ -545,11 +617,16 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
           </div>
 
           <p className="text-sm text-mute mt-2">
-            Fonts in the open-source Google Fonts catalog with letterforms, weight, and proportions closest to your image.
+            Fonts in the open-source Google Fonts catalog with letterforms, weight, and proportions
+            closest to your image.
           </p>
 
           {/* Interactive Category Filter Tabs */}
-          <div className="mt-4 flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Filter matches by font category">
+          <div
+            className="mt-4 flex flex-wrap items-center gap-1.5"
+            role="tablist"
+            aria-label="Filter matches by font category"
+          >
             {["All", "Sans Serif", "Serif", "Display", "Monospace", "Script"].map((cat) => {
               const active = categoryFilter === cat;
               return (
@@ -573,65 +650,76 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
 
           {displayedMatches.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-line bg-card p-6 text-center text-sm text-mute">
-              No top matches in the &ldquo;{categoryFilter}&rdquo; category. Try selecting &ldquo;All&rdquo; or another category.
+              No top matches in the &ldquo;{categoryFilter}&rdquo; category. Try selecting
+              &ldquo;All&rdquo; or another category.
             </div>
           ) : (
             <ol className="mt-5 grid gap-4 items-stretch">
               {displayedMatches.map((m) => (
-              <li key={m.font.family} className="flex h-full min-w-0 flex-col rounded-2xl border border-line bg-card p-4 sm:p-5">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 min-w-0">
-                  <h3
-                    className="text-lg sm:text-xl font-semibold text-ink truncate min-w-0 max-w-full sm:max-w-[70%]"
-                    title={m.font.family}
-                  >
-                    {m.font.family}
-                  </h3>
-                  <span
-                    className={`shrink-0 rounded-full px-3 py-0.5 text-xs font-semibold whitespace-nowrap ${
-                      m.matchLabel === "Strong match"
-                        ? "bg-accent/15 text-accent border border-accent/30"
-                        : m.matchLabel === "Good match"
-                        ? "bg-ink/10 text-ink border border-line"
-                        : "bg-mute/10 text-mute border border-line"
-                    }`}
-                  >
-                    {m.matchLabel}
-                  </span>
-                </div>
-                <div className="my-3 flex-1 min-h-[4.2rem] max-h-[4.5rem] overflow-hidden py-0.5">
+                <li
+                  key={m.font.family}
+                  className="flex h-full min-w-0 flex-col rounded-2xl border border-line bg-card p-4 sm:p-5"
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 min-w-0">
+                    <h3
+                      className="text-lg sm:text-xl font-semibold text-ink truncate min-w-0 max-w-full sm:max-w-[70%]"
+                      title={m.font.family}
+                    >
+                      {m.font.family}
+                    </h3>
+                    <span
+                      className={`shrink-0 rounded-full px-3 py-0.5 text-xs font-semibold whitespace-nowrap ${
+                        m.matchLabel === "Strong match"
+                          ? "bg-accent/15 text-accent border border-accent/30"
+                          : m.matchLabel === "Good match"
+                            ? "bg-ink/10 text-ink border border-line"
+                            : "bg-mute/10 text-mute border border-line"
+                      }`}
+                    >
+                      {m.matchLabel}
+                    </span>
+                  </div>
+                  <div className="my-3 flex-1 min-h-[4.2rem] max-h-[4.5rem] overflow-hidden py-0.5">
+                    <p
+                      className="line-clamp-2 break-words text-[clamp(1.375rem,4vw,2rem)] leading-snug"
+                      style={{
+                        fontFamily: `'${m.font.family}',${m.font.fallback}`,
+                        fontWeight: m.weight || 400,
+                      }}
+                    >
+                      {res.text || SAMPLE}
+                    </p>
+                  </div>
                   <p
-                    className="line-clamp-2 break-words text-[clamp(1.375rem,4vw,2rem)] leading-snug"
-                    style={{
-                      fontFamily: `'${m.font.family}',${m.font.fallback}`,
-                      fontWeight: m.weight || 400,
-                    }}
+                    className="text-xs text-mute truncate min-w-0"
+                    title={`${m.font.category} · ${m.style} (${m.weight}) · Google Fonts`}
                   >
-                    {res.text || SAMPLE}
+                    {m.font.category} ·{" "}
+                    <span className="font-medium text-ink">
+                      {m.style} ({m.weight})
+                    </span>{" "}
+                    · Google Fonts
                   </p>
-                </div>
-                <p className="text-xs text-mute truncate min-w-0" title={`${m.font.category} · ${m.style} (${m.weight}) · Google Fonts`}>
-                  {m.font.category} · <span className="font-medium text-ink">{m.style} ({m.weight})</span> · Google Fonts
-                </p>
-                <div className="mt-auto pt-4 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPrev(m.font)}
-                    className="inline-flex items-center rounded-lg border border-line px-3 py-1.5 text-sm whitespace-nowrap hover:border-ink transition-colors"
-                  >
-                    Preview
-                  </button>
-                  <CopyBtn text={m.font.family} label="Copy Name" />
-                  <CopyBtn text={css(m.font)} label="Copy Code" />
-                  <Link
-                    href={`/fonts/${slug(m.font.family)}`}
-                    className="inline-flex items-center rounded-lg border border-line px-3 py-1.5 text-sm whitespace-nowrap text-accent hover:border-ink transition-colors sm:ml-auto"
-                  >
-                    Details &amp; pairings →
-                  </Link>
-                </div>
-              </li>
-            ))}
-          </ol>
+                  <div className="mt-auto pt-4 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPrev(m.font)}
+                      className="inline-flex items-center rounded-lg border border-line px-3 py-1.5 text-sm whitespace-nowrap hover:border-ink transition-colors"
+                    >
+                      Preview
+                    </button>
+                    <CopyBtn text={m.font.family} label="Copy Name" />
+                    <CopyBtn text={css(m.font)} label="Copy Code" />
+                    <Link
+                      href={`/fonts/${slug(m.font.family)}`}
+                      className="inline-flex items-center rounded-lg border border-line px-3 py-1.5 text-sm whitespace-nowrap text-accent hover:border-ink transition-colors sm:ml-auto"
+                    >
+                      Details &amp; pairings →
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ol>
           )}
 
           {/* 4) Diagnostics Debug Panel (?debug=1) */}
@@ -642,20 +730,31 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
                   <Bug className="h-4 w-4 text-accent" />
                   Debug Diagnostics (?debug=1)
                 </span>
-                <span className="rounded bg-accent/10 px-2 py-0.5 text-accent font-medium">Active</span>
+                <span className="rounded bg-accent/10 px-2 py-0.5 text-accent font-medium">
+                  Active
+                </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4 text-mute">
                 <div>
-                  <b>OCR Text:</b> <span className="text-ink">&ldquo;{res.debug.ocrText}&rdquo;</span> ({res.debug.textSource})
+                  <b>OCR Text:</b>{" "}
+                  <span className="text-ink">&ldquo;{res.debug.ocrText}&rdquo;</span> (
+                  {res.debug.textSource})
                 </div>
                 <div>
-                  <b>Estimated Style:</b> <span className="text-ink capitalize">{res.debug.styleSummary}</span>
+                  <b>Estimated Style:</b>{" "}
+                  <span className="text-ink capitalize">{res.debug.styleSummary}</span>
                 </div>
                 <div>
-                  <b>Stage 1 Candidates:</b> <span className="text-ink">{res.debug.candidatesStage1Count}</span> retained of {res.debug.candidatesLoaded}
+                  <b>Stage 1 Candidates:</b>{" "}
+                  <span className="text-ink">{res.debug.candidatesStage1Count}</span> retained of{" "}
+                  {res.debug.candidatesLoaded}
                 </div>
                 <div>
-                  <b>Estimated Classification:</b> <span className="text-ink">{res.debug.estimatedCategory} · {res.debug.estimatedWeight} · {res.debug.estimatedWidth}</span>
+                  <b>Estimated Classification:</b>{" "}
+                  <span className="text-ink">
+                    {res.debug.estimatedCategory} · {res.debug.estimatedWeight} ·{" "}
+                    {res.debug.estimatedWidth}
+                  </span>
                 </div>
               </div>
               {!res.debug.isOrderAscending && (
@@ -664,10 +763,14 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
                   className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm font-semibold text-red-500"
                 >
                   <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>WARNING: Displayed candidates are not sorted in ascending order of distance!</span>
+                  <span>
+                    WARNING: Displayed candidates are not sorted in ascending order of distance!
+                  </span>
                 </div>
               )}
-              <p className="font-semibold text-ink mb-1">Top 10 Ranked Candidates (Stage 2 Weighted Distance):</p>
+              <p className="font-semibold text-ink mb-1">
+                Top 10 Ranked Candidates (Stage 2 Weighted Distance):
+              </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -684,7 +787,9 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
                       <tr key={item.family} className="border-b border-line/40">
                         <td className="py-1 pr-3 text-mute">{idx + 1}</td>
                         <td className="py-1 pr-3 font-medium text-ink">{item.family}</td>
-                        <td className="py-1 pr-3 text-accent font-mono">{item.distance.toFixed(4)}</td>
+                        <td className="py-1 pr-3 text-accent font-mono">
+                          {item.distance.toFixed(4)}
+                        </td>
                         <td className="py-1 pr-3 text-mute font-mono">
                           {Number.isFinite(item.secondary) ? item.secondary.toFixed(4) : "—"}
                         </td>

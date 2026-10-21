@@ -7,7 +7,8 @@ export default function Footer() {
         <div>
           <p className="font-medium text-ink">TypeMatcher — Find the font. Find your style.</p>
           <p className="mt-1 text-xs text-mute">
-            All fonts are open source from Google Fonts. Always check each font&apos;s license before commercial use.
+            All fonts are open source from Google Fonts. Always check each font&apos;s license
+            before commercial use.
           </p>
         </div>
         <nav className="flex flex-wrap items-center gap-4" aria-label="Footer">

@@ -121,7 +121,9 @@ export default function TestFontsClient() {
   const [allUniqueTop3, setAllUniqueTop3] = useState<boolean | null>(null);
 
   // Pre-load all test fonts into document
-  const testFonts = TEST_CASES.map((tc) => FONTS.find((f) => f.family === tc.family)!).filter(Boolean);
+  const testFonts = TEST_CASES.map((tc) => FONTS.find((f) => f.family === tc.family)!).filter(
+    Boolean,
+  );
   useGoogleFonts(testFonts);
 
   const runSuite = async () => {
@@ -198,21 +200,23 @@ export default function TestFontsClient() {
       const isTrueFontInTop5 = top5.some(
         (m) =>
           m.font.family.toLowerCase() === tc.family.toLowerCase() ||
-          m.font.family.toLowerCase().startsWith(tc.family.toLowerCase())
+          m.font.family.toLowerCase().startsWith(tc.family.toLowerCase()),
       );
 
       const top5Categories = top5.map((m) => m.font.category);
-      const allTop5CorrectCategory = top5.every((m) => isCategoryMatch(tc.category, m.font.category));
+      const allTop5CorrectCategory = top5.every((m) =>
+        isCategoryMatch(tc.category, m.font.category),
+      );
       const top3Families = res.matches.map((m) => m.font.family);
       const estimatedStyle = res.styleEstimate?.summary || "unknown";
 
       addLog(
-        `[Result] ${tc.name}: Estimated: "${estimatedStyle}". Matches: ${top3Families.join(", ")}`
+        `[Result] ${tc.name}: Estimated: "${estimatedStyle}". Matches: ${top3Families.join(", ")}`,
       );
       addLog(
         `[Verification] (1) Distances non-decreasing: ${distancesNonDecreasing ? "PASS ✓" : "FAIL ✗"} | ` +
-        `(2) Labels monotonic: ${labelsNeverStronger ? "PASS ✓" : "FAIL ✗"} | ` +
-        `(3) True font in Top 5: ${isTrueFontInTop5 ? `PASS (${tc.family}) ✓` : `FAIL (${tc.family}) ✗`}`
+          `(2) Labels monotonic: ${labelsNeverStronger ? "PASS ✓" : "FAIL ✗"} | ` +
+          `(3) True font in Top 5: ${isTrueFontInTop5 ? `PASS (${tc.family}) ✓` : `FAIL (${tc.family}) ✗`}`,
       );
 
       suiteResults.push({
@@ -238,7 +242,7 @@ export default function TestFontsClient() {
     addLog(
       `Diversity Verification: ${uniqueTop3Count} distinct top-3 lists out of ${suiteResults.length} test images. ${
         isDistinct ? "ALL TOP-3 LISTS ARE VISIBLY DISTINCT! ✓" : "Some lists matched."
-      }`
+      }`,
     );
 
     console.table(
@@ -252,7 +256,7 @@ export default function TestFontsClient() {
         Top1Match: r.matches[0]?.font.family,
         MatchLabel: r.matches[0]?.matchLabel,
         Distance: r.matches[0]?.rawDistance,
-      }))
+      })),
     );
 
     setResults(suiteResults);
@@ -268,9 +272,10 @@ export default function TestFontsClient() {
         <div>
           <h1 className="font-display text-4xl font-semibold">Font Style Matching Test Suite</h1>
           <p className="mt-2 text-mute text-sm max-w-2xl">
-            Renders 8 distinct test images across typographic categories (Sans, Serif, Monospace, Script, Display)
-            and weights (Thin, Regular, Bold). Validates style classification, category accuracy for the top 5 candidates,
-            and confirms that different images produce different top-3 matches.
+            Renders 8 distinct test images across typographic categories (Sans, Serif, Monospace,
+            Script, Display) and weights (Thin, Regular, Bold). Validates style classification,
+            category accuracy for the top 5 candidates, and confirms that different images produce
+            different top-3 matches.
           </p>
         </div>
         <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
@@ -326,8 +331,9 @@ export default function TestFontsClient() {
                 <div>
                   <h3 className="text-lg font-semibold text-ink">{r.testCase.name}</h3>
                   <p className="text-xs text-mute mt-0.5">
-                    Rendered with: <b>{r.testCase.family}</b> ({r.testCase.category}, weight {r.testCase.weight}) ·
-                    Estimated style: <b className="text-ink capitalize">{r.estimatedStyle}</b>
+                    Rendered with: <b>{r.testCase.family}</b> ({r.testCase.category}, weight{" "}
+                    {r.testCase.weight}) · Estimated style:{" "}
+                    <b className="text-ink capitalize">{r.estimatedStyle}</b>
                   </p>
                 </div>
                 <span
@@ -344,7 +350,12 @@ export default function TestFontsClient() {
               </div>
 
               <div className="mb-4 overflow-hidden rounded-xl border border-line bg-white p-2">
-                <img src={r.imageUrl} alt={r.testCase.name} className="h-16 w-full object-contain" />
+                {/* eslint-disable-next-line @next/next/no-img-element -- dynamically rendered in-memory canvas data URL */}
+                <img
+                  src={r.imageUrl}
+                  alt={r.testCase.name}
+                  className="h-16 w-full object-contain"
+                />
               </div>
 
               <div className="mb-4 flex flex-wrap gap-2 text-xs">
@@ -373,7 +384,8 @@ export default function TestFontsClient() {
                       : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
                   }`}
                 >
-                  (3) True Font in Top 5: {r.isTrueFontInTop5 ? `PASS (${r.testCase.family}) ✓` : `FAIL ✗`}
+                  (3) True Font in Top 5:{" "}
+                  {r.isTrueFontInTop5 ? `PASS (${r.testCase.family}) ✓` : `FAIL ✗`}
                 </span>
               </div>
 

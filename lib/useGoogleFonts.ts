@@ -26,5 +26,6 @@ export function useGoogleFonts(fonts: Font[]) {
       l.href = u;
       document.head.appendChild(l);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally using joined font family key 'k' to avoid re-running on new array references
   }, [k]);
 }

@@ -1,3 +1,29 @@
-import {ImageResponse} from "next/og";export const size={width:1200,height:630};export const contentType="image/png";export const alt="TypeMatcher – Find the font. Find your style.";
-export default function Img(){return new ImageResponse(<div style={{width:"100%",height:"100%",display:"flex",flexDirection:"column",justifyContent:"center",padding:80,background:"#fbfbfa",color:"#17171c",fontFamily:"serif"}}><div style={{fontSize:150,display:"flex"}}>Type<span style={{color:"#3a3af0",fontStyle:"italic"}}>Matcher</span></div><div style={{fontSize:44,marginTop:16,color:"#6b6b76"}}>Find the font. Find your style.</div></div>,size)}
-
+import { ImageResponse } from "next/og";
+export const size = { width: 1200, height: 630 };
+export const contentType = "image/png";
+export const alt = "TypeMatcher – Find the font. Find your style.";
+export default function Img() {
+  return new ImageResponse(
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        padding: 80,
+        background: "#fbfbfa",
+        color: "#17171c",
+        fontFamily: "serif",
+      }}
+    >
+      <div style={{ fontSize: 150, display: "flex" }}>
+        Type<span style={{ color: "#3a3af0", fontStyle: "italic" }}>Matcher</span>
+      </div>
+      <div style={{ fontSize: 44, marginTop: 16, color: "#6b6b76" }}>
+        Find the font. Find your style.
+      </div>
+    </div>,
+    size,
+  );
+}

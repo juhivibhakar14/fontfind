@@ -57,11 +57,7 @@ export interface IdentifyOptions {
 }
 
 export interface FontIdentifierService {
-  identify(
-    image: Blob,
-    candidates: Font[],
-    options?: IdentifyOptions
-  ): Promise<IdentifyResult>;
+  identify(image: Blob, candidates: Font[], options?: IdentifyOptions): Promise<IdentifyResult>;
 }
 
 let sharedWorker: any = null;
@@ -210,11 +206,11 @@ export const browserService: FontIdentifierService = {
       let targetW = 400;
       if (features.strokeThickness < 0.055 || features.density < 0.24) {
         targetW = 300;
-      } else if (features.strokeThickness >= 0.13 || features.density >= 0.50) {
+      } else if (features.strokeThickness >= 0.13 || features.density >= 0.5) {
         targetW = 800;
       } else if (features.strokeThickness >= 0.09 || features.density >= 0.36) {
         targetW = 700;
-      } else if (features.strokeThickness >= 0.075 || features.density >= 0.30) {
+      } else if (features.strokeThickness >= 0.075 || features.density >= 0.3) {
         targetW = 500;
       } else {
         targetW = 400;
@@ -233,7 +229,8 @@ export const browserService: FontIdentifierService = {
     }
 
     const stage1Candidates = verifiedPool.filter((f) => matchCategory(f));
-    const candidatesStage1Count = stage1Candidates.length > 0 ? stage1Candidates.length : verifiedPool.length;
+    const candidatesStage1Count =
+      stage1Candidates.length > 0 ? stage1Candidates.length : verifiedPool.length;
 
     // Stage 2: Rank candidates by typographic feature distance with category affinity
     const scored = verifiedPool
@@ -244,11 +241,11 @@ export const browserService: FontIdentifierService = {
           font.family,
           font.fallback,
           targetFeatures.boxHeight,
-          weight
+          weight,
         );
         const { distance: rawD, secondary } = computeFeatureDistance(
           targetFeatures,
-          candidateFeatures
+          candidateFeatures,
         );
         const safeRawD = Number.isFinite(rawD) ? rawD : Infinity;
         const safeSec = Number.isFinite(secondary) ? secondary : Infinity;
@@ -337,12 +334,12 @@ export const browserService: FontIdentifierService = {
         item.weight >= 800
           ? "Black"
           : item.weight >= 700
-          ? "Bold"
-          : item.weight >= 600
-          ? "SemiBold"
-          : item.weight <= 300
-          ? "Light"
-          : "Regular",
+            ? "Bold"
+            : item.weight >= 600
+              ? "SemiBold"
+              : item.weight <= 300
+                ? "Light"
+                : "Regular",
       weight: item.weight,
     });
 
@@ -383,10 +380,10 @@ export const browserService: FontIdentifierService = {
       console.log(`[TypeMatcher Debug] OCR Text: "${text}" (${textSource})`);
       console.log(`[TypeMatcher Debug] Estimated Style: ${styleEstimate.summary}`);
       console.log(
-        `[TypeMatcher Debug] Stage 1 Filter: ${candidatesStage1Count} of ${loaded.length} candidates retained`
+        `[TypeMatcher Debug] Stage 1 Filter: ${candidatesStage1Count} of ${loaded.length} candidates retained`,
       );
       console.log(
-        `[TypeMatcher Debug] Displayed Order Ascending Check: ${isOrderAscending ? "PASS ✓" : "FAIL ⚠️"}`
+        `[TypeMatcher Debug] Displayed Order Ascending Check: ${isOrderAscending ? "PASS ✓" : "FAIL ⚠️"}`,
       );
       console.log("[TypeMatcher Debug] Top 10 Ranked Candidates (Displayed Order):");
       console.table(top10Debug);

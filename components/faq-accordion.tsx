@@ -44,9 +44,7 @@ export default function FaqAccordion({ items }: FaqAccordionProps) {
               </span>
               <span
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-line/40 text-mute transition-all duration-300 group-hover:bg-line/70 group-hover:text-ink ${
-                  isOpen
-                    ? "rotate-180 bg-accent/10 text-accent"
-                    : "rotate-0"
+                  isOpen ? "rotate-180 bg-accent/10 text-accent" : "rotate-0"
                 }`}
                 aria-hidden="true"
               >
@@ -59,9 +57,7 @@ export default function FaqAccordion({ items }: FaqAccordionProps) {
               role="region"
               aria-labelledby={`faq-question-${i}`}
               className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
-                isOpen
-                  ? "grid-rows-[1fr] opacity-100"
-                  : "grid-rows-[0fr] opacity-0"
+                isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
               }`}
             >
               <div className="overflow-hidden">

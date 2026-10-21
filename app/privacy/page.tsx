@@ -3,7 +3,7 @@ import { meta } from "@/lib/seo";
 export const metadata = meta(
   "Privacy Policy – TypeMatcher",
   "TypeMatcher processes all images locally inside your browser. No uploaded images are sent to or stored on external servers.",
-  "/privacy"
+  "/privacy",
 );
 
 export default function PrivacyPage() {
@@ -20,31 +20,32 @@ export default function PrivacyPage() {
       <section className="mt-8 space-y-3">
         <h2 className="text-xl font-semibold text-ink">In-Browser Image Processing</h2>
         <p>
-          Images you upload or paste are processed entirely inside your browser using
-          client-side Canvas APIs and in-browser Optical Character Recognition (OCR).
-          Your images are <strong>never uploaded to our servers</strong> and never leave your device.
+          Images you upload or paste are processed entirely inside your browser using client-side
+          Canvas APIs and in-browser Optical Character Recognition (OCR). Your images are{" "}
+          <strong>never uploaded to our servers</strong> and never leave your device.
         </p>
       </section>
 
       <section className="mt-8 space-y-3">
         <h2 className="text-xl font-semibold text-ink">Public CDNs and External Requests</h2>
         <p>
-          To perform style comparison and display font previews, your browser downloads
-          open-source font files and OCR models from public Content Delivery Networks (CDNs),
-          including Google Fonts and jsDelivr.
+          To perform style comparison and display font previews, your browser downloads open-source
+          font files and OCR models from public Content Delivery Networks (CDNs), including Google
+          Fonts and jsDelivr.
         </p>
         <p className="text-sm text-mute">
-          These CDNs receive standard HTTP network requests (which inherently include your IP address
-          and browser user-agent header), but they never receive your uploaded images or analyzed text.
+          These CDNs receive standard HTTP network requests (which inherently include your IP
+          address and browser user-agent header), but they never receive your uploaded images or
+          analyzed text.
         </p>
       </section>
 
       <section className="mt-8 space-y-3">
         <h2 className="text-xl font-semibold text-ink">Analytics</h2>
         <p>
-          We may use privacy-friendly, cookieless analytics (such as Plausible) to measure
-          aggregate website traffic. No cookies are stored, no persistent identifiers are created,
-          and no personal information is tracked or shared.
+          We may use privacy-friendly, cookieless analytics (such as Plausible) to measure aggregate
+          website traffic. No cookies are stored, no persistent identifiers are created, and no
+          personal information is tracked or shared.
         </p>
       </section>
 

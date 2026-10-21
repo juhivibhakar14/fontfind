@@ -48,10 +48,7 @@ export default function FontDetail({ font, fonts }: { font: Font; fonts: Font[] 
         className="mt-6 w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-accent"
       />
 
-      <p
-        className="mt-6 break-words text-[clamp(2rem,6vw,4.5rem)] leading-tight"
-        style={ff(font)}
-      >
+      <p className="mt-6 break-words text-[clamp(2rem,6vw,4.5rem)] leading-tight" style={ff(font)}>
         {text || "Aa"}
       </p>
 
@@ -85,10 +82,7 @@ export default function FontDetail({ font, fonts }: { font: Font; fonts: Font[] 
               Design with intent
             </p>
             <div className="mt-2.5 flex-1 min-h-[3rem] max-h-[3.5rem] overflow-hidden py-0.5">
-              <p
-                className="line-clamp-2 break-words text-sm leading-snug text-mute"
-                style={ff(b)}
-              >
+              <p className="line-clamp-2 break-words text-sm leading-snug text-mute" style={ff(b)}>
                 Body text in {b.family} stays quiet and readable.
               </p>
             </div>
@@ -133,4 +127,3 @@ export default function FontDetail({ font, fonts }: { font: Font; fonts: Font[] 
     </div>
   );
 }
-

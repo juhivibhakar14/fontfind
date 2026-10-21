@@ -1,14 +1,28 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { pairsWithCurated as pairsFor, css, type Cat, type Mood, type Font } from "@/lib/fonts/data";
+import {
+  pairsWithCurated as pairsFor,
+  css,
+  type Cat,
+  type Mood,
+  type Font,
+} from "@/lib/fonts/data";
 import { useGoogleFonts } from "@/lib/useGoogleFonts";
 import FontCard from "./font-card";
 import FontPreview, { CopyBtn } from "./font-preview";
 import AdSlot from "./ad-slot";
 
 const CATS: Cat[] = ["Serif", "Sans Serif", "Display", "Monospace", "Handwriting", "Script"];
-const MOODS: Mood[] = ["Modern", "Minimal", "Elegant", "Luxury", "Playful", "Professional", "Retro"];
+const MOODS: Mood[] = [
+  "Modern",
+  "Minimal",
+  "Elegant",
+  "Luxury",
+  "Playful",
+  "Professional",
+  "Retro",
+];
 const STEP = 24;
 
 export default function Explorer({ fonts }: { fonts: Font[] }) {
@@ -26,9 +40,9 @@ export default function Explorer({ fonts }: { fonts: Font[] }) {
         (f) =>
           f.family.toLowerCase().includes(q.toLowerCase()) &&
           (!cat || f.category === cat) &&
-          (!mood || f.moods.includes(mood))
+          (!mood || f.moods.includes(mood)),
       ),
-    [fonts, q, cat, mood]
+    [fonts, q, cat, mood],
   );
 
   const shown = list.slice(0, n);
@@ -168,10 +182,7 @@ export default function Explorer({ fonts }: { fonts: Font[] }) {
                   {h.family} + {b.family}
                 </p>
                 <div className="mt-auto pt-4 flex items-center gap-2">
-                  <CopyBtn
-                    label="Copy Code"
-                    text={`h1,h2,h3 { ${css(h)} }\nbody { ${css(b)} }`}
-                  />
+                  <CopyBtn label="Copy Code" text={`h1,h2,h3 { ${css(h)} }\nbody { ${css(b)} }`} />
                 </div>
               </article>
             ))}

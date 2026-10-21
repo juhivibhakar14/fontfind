@@ -1,14 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { type Font, css, importUrl } from "@/lib/fonts/data";
+import { type Font, importUrl } from "@/lib/fonts/data";
 
 import CopyBtn from "@/components/copy-btn";
 export { CopyBtn };
 
 function CloseIcon() {
   return (
-    <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+    <svg
+      className="h-4 w-4 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
       <path d="M18 6 6 18M6 6l12 12" />
     </svg>
   );
@@ -20,8 +27,8 @@ export default function FontPreview({ font, onClose }: { font: Font; onClose: ()
   const [w, setW] = useState(font.weights.includes(400) ? 400 : font.weights[0]);
   const [ls, setLs] = useState(0);
   const [lh, setLh] = useState(1.3);
-  const [tf, setTf] = useState("none");
-  const [al, setAl] = useState("left");
+  const [tf, setTf] = useState<"none" | "uppercase" | "lowercase">("none");
+  const [al, setAl] = useState<"left" | "center" | "right">("left");
   const [use, setUse] = useState(false);
 
   useEffect(() => {
@@ -29,19 +36,17 @@ export default function FontPreview({ font, onClose }: { font: Font; onClose: ()
     l.rel = "stylesheet";
     l.href = importUrl(font);
     document.head.appendChild(l);
+    return () => {
+      l.remove();
+    };
   }, [font]);
 
   const rule = `font-family: '${font.family}', ${font.fallback};\nfont-weight: ${w};`;
-  const sl = (
-    l: string,
-    v: number,
-    s: (n: number) => void,
-    min: number,
-    max: number,
-    step = 1
-  ) => (
+  const sl = (l: string, v: number, s: (n: number) => void, min: number, max: number, step = 1) => (
     <label className="flex flex-col gap-1 text-xs text-mute min-w-0">
-      <span className="truncate">{l}: {v}</span>
+      <span className="truncate">
+        {l}: {v}
+      </span>
       <input
         type="range"
         min={min}
@@ -97,8 +102,8 @@ export default function FontPreview({ font, onClose }: { font: Font; onClose: ()
             fontWeight: w,
             letterSpacing: `${ls}px`,
             lineHeight: lh,
-            textTransform: tf as any,
-            textAlign: al as any,
+            textTransform: tf,
+            textAlign: al,
           }}
         >
           {text || "Type your text..."}
@@ -115,7 +120,7 @@ export default function FontPreview({ font, onClose }: { font: Font; onClose: ()
           <select
             aria-label="Case"
             value={tf}
-            onChange={(e) => setTf(e.target.value)}
+            onChange={(e) => setTf(e.target.value as "none" | "uppercase" | "lowercase")}
             className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-xs sm:text-sm text-ink focus:outline-none focus:ring-1 focus:ring-accent"
           >
             <option value="none">Normal case</option>
@@ -125,7 +130,7 @@ export default function FontPreview({ font, onClose }: { font: Font; onClose: ()
           <select
             aria-label="Alignment"
             value={al}
-            onChange={(e) => setAl(e.target.value)}
+            onChange={(e) => setAl(e.target.value as "left" | "center" | "right")}
             className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-xs sm:text-sm text-ink focus:outline-none focus:ring-1 focus:ring-accent"
           >
             <option value="left">Left</option>

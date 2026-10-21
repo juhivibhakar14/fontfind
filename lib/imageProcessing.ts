@@ -15,11 +15,7 @@ export interface FontFeatures {
 }
 
 export type EstimatedCategory =
-  | "Sans Serif"
-  | "Serif"
-  | "Monospace"
-  | "Script/Handwriting"
-  | "Display";
+  "Sans Serif" | "Serif" | "Monospace" | "Script/Handwriting" | "Display";
 
 export type WeightClass = "Thin" | "Regular" | "Bold" | "Black";
 export type WidthClass = "Condensed" | "Normal" | "Wide";
@@ -36,7 +32,7 @@ export interface StyleEstimate {
 }
 
 export const MATCH_THRESHOLDS = {
-  strong: 0.20,
+  strong: 0.2,
   good: 0.38,
 };
 
@@ -48,12 +44,12 @@ export function getMatchLabel(distance: number): MatchLabel {
 }
 
 export const FEATURE_WEIGHTS = {
-  aspect: 0.20,
+  aspect: 0.2,
   density: 0.18,
   strokeThickness: 0.18,
   contrast: 0.14,
   hProfile: 0.14,
-  vProfile: 0.10,
+  vProfile: 0.1,
   serif: 0.06,
 };
 
@@ -131,11 +127,7 @@ function resampleProfile(src: number[] | Float32Array, targetLen: number): Float
 /**
  * Extracts typographic features from a binary mask (1 = ink, 0 = background).
  */
-export function extractFeaturesFromMask(
-  mask: Uint8Array,
-  bw: number,
-  bh: number
-): FontFeatures {
+export function extractFeaturesFromMask(mask: Uint8Array, bw: number, bh: number): FontFeatures {
   const emptyFeatures: FontFeatures = {
     aspect: 1,
     density: 0,
@@ -326,7 +318,7 @@ export function estimateStyle(features: FontFeatures, textLength = 6): StyleEsti
   if (features.strokeThickness < 0.055 || features.density < 0.24) {
     weightClass = "Thin";
     allowedWeights = ["Thin", "Regular"];
-  } else if (features.strokeThickness >= 0.13 || features.density >= 0.50) {
+  } else if (features.strokeThickness >= 0.13 || features.density >= 0.5) {
     weightClass = "Black";
     allowedWeights = ["Bold", "Black"];
   } else if (features.strokeThickness >= 0.09 || features.density >= 0.36) {
@@ -359,7 +351,7 @@ export function estimateStyle(features: FontFeatures, textLength = 6): StyleEsti
   // Only classify as Script/Handwriting if there is clear connected cursive (valleys don't drop to 0)
   const isConnectedCursive =
     safeLength >= 4 &&
-    hMetrics.minValley > 0.10 &&
+    hMetrics.minValley > 0.1 &&
     hMetrics.valleysCount === 0 &&
     features.contrast > 1.25;
 
@@ -386,7 +378,7 @@ export function estimateStyle(features: FontFeatures, textLength = 6): StyleEsti
     allowedCategories = ["Display", "Sans Serif"];
   } else {
     category = "Sans Serif";
-    if (features.contrast < 1.30 && features.serifScore < 0.12) {
+    if (features.contrast < 1.3 && features.serifScore < 0.12) {
       categoryConfidence = "high";
       allowedCategories = ["Sans Serif"];
     } else {
@@ -395,8 +387,7 @@ export function estimateStyle(features: FontFeatures, textLength = 6): StyleEsti
     }
   }
 
-  const categoryName =
-    category === "Script/Handwriting" ? "script" : category.toLowerCase();
+  const categoryName = category === "Script/Handwriting" ? "script" : category.toLowerCase();
   const summary = `${weightClass.toLowerCase()}, ${widthClass.toLowerCase()}-width ${categoryName}`;
 
   return {
@@ -601,7 +592,7 @@ export function verifyFontLoaded(family: string, testString = "MWQgypq190"): boo
 export async function loadAndVerifyFonts(
   fonts: { family: string; weights?: number[] }[],
   text: string,
-  onBatchLoaded?: (loadedCount: number, totalCount: number) => void
+  onBatchLoaded?: (loadedCount: number, totalCount: number) => void,
 ): Promise<{ loaded: string[]; failed: string[] }> {
   if (typeof document === "undefined") {
     return { loaded: fonts.map((f) => f.family), failed: [] };
@@ -632,18 +623,18 @@ export async function loadAndVerifyFonts(
 
   // 2. Concurrently request all unverified font glyphs
   const loadPromises = unverified.map((f, idx) =>
-    document.fonts.load(`72px "${f.family}"`, text).then(() => {
-      if (onBatchLoaded && idx % 10 === 0) {
-        onBatchLoaded(idx + 1, fonts.length);
-      }
-    }).catch(() => null)
+    document.fonts
+      .load(`72px "${f.family}"`, text)
+      .then(() => {
+        if (onBatchLoaded && idx % 10 === 0) {
+          onBatchLoaded(idx + 1, fonts.length);
+        }
+      })
+      .catch(() => null),
   );
 
   // Allow up to 4.5s for initial cold network load
-  await Promise.race([
-    Promise.all(loadPromises),
-    new Promise((r) => setTimeout(r, 4500)),
-  ]);
+  await Promise.race([Promise.all(loadPromises), new Promise((r) => setTimeout(r, 4500))]);
 
   if (onBatchLoaded) {
     onBatchLoaded(fonts.length, fonts.length);
@@ -678,7 +669,7 @@ export function renderCandidateFeatures(
   family: string,
   fallback = "sans-serif",
   targetHeight = 64,
-  weight = 400
+  weight = 400,
 ): FontFeatures {
   const cacheKey = `${family}::${text}::${targetHeight}::${weight}`;
   const cached = featuresCache.get(cacheKey);
@@ -756,7 +747,7 @@ export function renderCandidateFeatures(
  */
 export function computeFeatureDistance(
   a: FontFeatures,
-  b: FontFeatures
+  b: FontFeatures,
 ): { distance: number; secondary: number } {
   if (a.isEmpty || b.isEmpty) return { distance: Infinity, secondary: Infinity };
 
@@ -808,7 +799,15 @@ export function computeFeatureDistance(
 export function getFamilyPrefix(family: string): string {
   const cleaned = family.toLowerCase().trim();
   const tokens = cleaned.split(/\s+/);
-  if (tokens.length >= 2 && (tokens[0] === "noto" || tokens[0] === "dm" || tokens[0] === "source" || tokens[0] === "libre" || tokens[0] === "ibm" || tokens[0] === "pt")) {
+  if (
+    tokens.length >= 2 &&
+    (tokens[0] === "noto" ||
+      tokens[0] === "dm" ||
+      tokens[0] === "source" ||
+      tokens[0] === "libre" ||
+      tokens[0] === "ibm" ||
+      tokens[0] === "pt")
+  ) {
     return `${tokens[0]} ${tokens[1]}`;
   }
   return tokens[0];

@@ -42,10 +42,7 @@ export default function FontCard({
         ) : null}
       </div>
 
-      <h3
-        className="mt-3 font-semibold text-base text-ink truncate min-w-0"
-        title={font.family}
-      >
+      <h3 className="mt-3 font-semibold text-base text-ink truncate min-w-0" title={font.family}>
         {font.family}
       </h3>
 
@@ -65,7 +62,8 @@ export default function FontCard({
         className="mt-3 text-xs text-mute truncate min-w-0"
         title={`${font.category} · ${font.weights.length} weight${font.weights.length > 1 ? "s" : ""} · Google Fonts`}
       >
-        {font.category} · {font.weights.length} weight{font.weights.length > 1 ? "s" : ""} · Google Fonts
+        {font.category} · {font.weights.length} weight{font.weights.length > 1 ? "s" : ""} · Google
+        Fonts
       </p>
 
       <div className="mt-auto pt-4 flex flex-wrap items-center gap-2">

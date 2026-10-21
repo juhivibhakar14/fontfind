@@ -16,4 +16,3 @@ export const meta = (title: string, description: string, path: string) => ({
     description,
   },
 });
-
