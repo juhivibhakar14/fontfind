@@ -175,6 +175,13 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [isDebug, setIsDebug] = useState(false);
   const inp = useRef<HTMLInputElement>(null);
+  const analysisIdRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [url]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -205,6 +212,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
   useGoogleFonts(all);
 
   const load = useCallback((f: Blob) => {
+    analysisIdRef.current++;
     setErr("");
     setRes(null);
     setOverrideText("");
@@ -255,6 +263,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
   };
 
   const clear = () => {
+    analysisIdRef.current++;
     if (inp.current) inp.current.value = "";
     if (url) URL.revokeObjectURL(url);
     setFile(null);
@@ -267,6 +276,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
 
   const run = async (customText?: string, allowFallback = false) => {
     if (busy || !file) return;
+    const currentAnalysisId = ++analysisIdRef.current;
     setBusy(true);
     setErr("");
     setProgress({ loaded: 0, total: Math.min(300, fonts.length) });
@@ -277,18 +287,26 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
         overrideText: textToUse || undefined,
         allowFallbackText: allowFallback,
         debug: isDebug,
-        onProgress: (loaded, total) => setProgress({ loaded, total }),
+        onProgress: (loaded, total) => {
+          if (analysisIdRef.current === currentAnalysisId) {
+            setProgress({ loaded, total });
+          }
+        },
       });
+      if (analysisIdRef.current !== currentAnalysisId) return;
       setRes(r);
       if (r.text) setOverrideText(r.text);
     } catch (e: unknown) {
+      if (analysisIdRef.current !== currentAnalysisId) return;
       setErr(
         e instanceof Error
           ? e.message
           : "We couldn't analyze the style from this image. Try uploading a clearer image with larger text.",
       );
     } finally {
-      setBusy(false);
+      if (analysisIdRef.current === currentAnalysisId) {
+        setBusy(false);
+      }
     }
   };
 
