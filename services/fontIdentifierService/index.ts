@@ -7,6 +7,7 @@ import {
   estimateStyle,
   getFamilyPrefix,
   loadAndVerifyFonts,
+  type FontFeatures,
   type StyleEstimate,
   type MatchLabel,
   type WeightClass,
@@ -86,6 +87,10 @@ async function getSharedWorker() {
   return workerPromise;
 }
 
+export function preloadOcrWorker() {
+  getSharedWorker().catch(() => {});
+}
+
 function fontSupportsWeight(font: Font, allowedWeights: WeightClass[]): boolean {
   for (const w of font.weights) {
     if (w <= 300 && allowedWeights.includes("Thin")) return true;
@@ -144,7 +149,7 @@ export const browserService: FontIdentifierService = {
 
     // Step 3: Extract typographic shape features from the cropped input image
     let bmp: ImageBitmap | null = null;
-    let targetFeatures;
+    let targetFeatures: FontFeatures;
     try {
       bmp = await createImageBitmap(image);
       targetFeatures = extractImageFeatures(bmp, bmp.width, bmp.height);
@@ -170,7 +175,7 @@ export const browserService: FontIdentifierService = {
     const pool = candidates.slice(0, 300);
     const { loaded, failed } = await loadAndVerifyFonts(pool, text, onProgress);
 
-    if (loaded.length < 20) {
+    if (loaded.length < 5) {
       return {
         matches: [],
         similar: [],
@@ -185,8 +190,8 @@ export const browserService: FontIdentifierService = {
 
     const verifiedPool = pool.filter((f) => loaded.includes(f.family));
 
-    // 2) TWO-STAGE RANKING
-    // Stage 1: Filter candidates by category and weight class within 1 step
+    // TWO-STAGE RANKING
+    // Stage 1: Filter and prioritize candidates by category & weight
     const matchCategory = (f: Font): boolean => {
       const cat = f.category;
       if (styleEstimate.allowedCategories.includes(cat)) return true;
@@ -201,47 +206,39 @@ export const browserService: FontIdentifierService = {
       return false;
     };
 
-    let stage1Candidates = verifiedPool.filter(
-      (f) => matchCategory(f) && fontSupportsWeight(f, styleEstimate.allowedWeights)
-    );
+    function getCandidateRenderWeight(font: Font, features: typeof targetFeatures): number {
+      let targetW = 400;
+      if (features.strokeThickness < 0.055 || features.density < 0.24) {
+        targetW = 300;
+      } else if (features.strokeThickness >= 0.13 || features.density >= 0.50) {
+        targetW = 800;
+      } else if (features.strokeThickness >= 0.09 || features.density >= 0.36) {
+        targetW = 700;
+      } else if (features.strokeThickness >= 0.075 || features.density >= 0.30) {
+        targetW = 500;
+      } else {
+        targetW = 400;
+      }
 
-    // If too restrictive (< 5 candidates), loosen weight filter within the SAME matching category first
-    if (stage1Candidates.length < 5) {
-      stage1Candidates = verifiedPool.filter((f) => matchCategory(f));
+      let closest = font.weights[0] || 400;
+      let minDiff = 9999;
+      for (const w of font.weights) {
+        const diff = Math.abs(w - targetW);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = w;
+        }
+      }
+      return closest;
     }
-    // Only if the matching category itself has fewer than 3 verified candidates, allow all verified fonts
-    if (stage1Candidates.length < 3) {
-      stage1Candidates = verifiedPool;
-    }
 
-function getCandidateRenderWeight(font: Font, targetWeight: WeightClass): number {
-  const targetW =
-    targetWeight === "Thin"
-      ? 300
-      : targetWeight === "Bold"
-      ? 700
-      : targetWeight === "Black"
-      ? 800
-      : 400;
+    const stage1Candidates = verifiedPool.filter((f) => matchCategory(f));
+    const candidatesStage1Count = stage1Candidates.length > 0 ? stage1Candidates.length : verifiedPool.length;
 
-  let closest = 400;
-  let minDiff = 9999;
-  for (const w of font.weights) {
-    const diff = Math.abs(w - targetW);
-    if (diff < minDiff) {
-      minDiff = diff;
-      closest = w;
-    }
-  }
-  return closest;
-}
-
-    const candidatesStage1Count = stage1Candidates.length;
-
-    // Stage 2: Rank remaining candidates by weighted feature distance
-    const scored = stage1Candidates
+    // Stage 2: Rank candidates by typographic feature distance with category affinity
+    const scored = verifiedPool
       .map((font) => {
-        const weight = getCandidateRenderWeight(font, styleEstimate.weightClass);
+        const weight = getCandidateRenderWeight(font, targetFeatures);
         const candidateFeatures = renderCandidateFeatures(
           text,
           font.family,
@@ -249,23 +246,45 @@ function getCandidateRenderWeight(font: Font, targetWeight: WeightClass): number
           targetFeatures.boxHeight,
           weight
         );
-        const { distance: d, secondary } = computeFeatureDistance(
+        const { distance: rawD, secondary } = computeFeatureDistance(
           targetFeatures,
           candidateFeatures
         );
-        const safeD = Number.isFinite(d) ? d : Infinity;
+        const safeRawD = Number.isFinite(rawD) ? rawD : Infinity;
         const safeSec = Number.isFinite(secondary) ? secondary : Infinity;
+
+        // Apply category affinity adjustment to prioritize classified style while keeping closest letterforms
+        const isCat = matchCategory(font);
+        let categoryAdjustment = 0;
+        if (!isCat) {
+          const isFontScript = font.category === "Script" || font.category === "Handwriting";
+          const isTargetScript = styleEstimate.category === "Script/Handwriting";
+          if (isFontScript && !isTargetScript) {
+            // Heavy penalty: prevent cursive/script fonts from appearing for standard text
+            categoryAdjustment = 0.35;
+          } else if (!isFontScript && isTargetScript) {
+            categoryAdjustment = 0.25;
+          } else if (styleEstimate.category === "Serif" && font.category === "Sans Serif") {
+            categoryAdjustment = 0.08;
+          } else if (styleEstimate.category === "Sans Serif" && font.category === "Serif") {
+            categoryAdjustment = 0.08;
+          } else {
+            categoryAdjustment = styleEstimate.categoryConfidence === "high" ? 0.06 : 0.03;
+          }
+        }
+        const finalD = safeRawD + categoryAdjustment;
+
         return {
           font,
-          d: safeD,
+          rawD: safeRawD,
+          d: finalD,
           secondary: safeSec,
           weight,
-          matchLabel: getMatchLabel(safeD),
+          matchLabel: getMatchLabel(safeRawD),
         };
       })
       .filter((item) => Number.isFinite(item.d) && item.d < 100)
       .sort((a, b) => {
-        // Break ties with secondary feature distance ascending, never list order
         if (Math.abs(a.d - b.d) < 1e-5) {
           if (Math.abs(a.secondary - b.secondary) < 1e-5) return 0;
           return a.secondary < b.secondary ? -1 : 1;
@@ -312,9 +331,18 @@ function getCandidateRenderWeight(font: Font, targetWeight: WeightClass): number
     const toMatch = (item: (typeof scored)[0]): FontMatch => ({
       font: item.font,
       matchLabel: item.matchLabel,
-      rawDistance: Number(item.d.toFixed(4)),
+      rawDistance: Number(item.rawD.toFixed(4)),
       secondaryDistance: Number(item.secondary.toFixed(4)),
-      style: "Regular",
+      style:
+        item.weight >= 800
+          ? "Black"
+          : item.weight >= 700
+          ? "Bold"
+          : item.weight >= 600
+          ? "SemiBold"
+          : item.weight <= 300
+          ? "Light"
+          : "Regular",
       weight: item.weight,
     });
 

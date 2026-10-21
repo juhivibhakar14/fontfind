@@ -8,12 +8,14 @@ export default function FontCard({
   sim,
   label,
   text,
+  weight,
   onPreview,
 }: {
   font: Font;
   sim?: number;
   label?: string;
   text: string;
+  weight?: number;
   onPreview: (f: Font) => void;
 }) {
   return (
@@ -21,7 +23,10 @@ export default function FontCard({
       <div className="flex items-start justify-between gap-2 min-w-0">
         <span
           className="text-5xl sm:text-6xl leading-none select-none"
-          style={{ fontFamily: `'${font.family}',${font.fallback}` }}
+          style={{
+            fontFamily: `'${font.family}',${font.fallback}`,
+            fontWeight: weight || 400,
+          }}
           aria-hidden="true"
         >
           Aa
@@ -47,7 +52,10 @@ export default function FontCard({
       <div className="mt-2.5 flex-1 min-h-[3.6rem] max-h-[3.6rem] overflow-hidden py-0.5">
         <p
           className="line-clamp-2 break-words text-lg sm:text-xl leading-snug"
-          style={{ fontFamily: `'${font.family}',${font.fallback}` }}
+          style={{
+            fontFamily: `'${font.family}',${font.fallback}`,
+            fontWeight: weight || 400,
+          }}
         >
           {text}
         </p>

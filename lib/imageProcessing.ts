@@ -4,6 +4,7 @@ export interface FontFeatures {
   aspect: number;
   density: number;
   strokeThickness: number;
+  contrast: number;
   hProfile: Float32Array;
   vProfile: Float32Array;
   serifScore: number;
@@ -35,8 +36,8 @@ export interface StyleEstimate {
 }
 
 export const MATCH_THRESHOLDS = {
-  strong: 0.18,
-  good: 0.35,
+  strong: 0.20,
+  good: 0.38,
 };
 
 export function getMatchLabel(distance: number): MatchLabel {
@@ -47,13 +48,13 @@ export function getMatchLabel(distance: number): MatchLabel {
 }
 
 export const FEATURE_WEIGHTS = {
-  aspect: 0.22,
+  aspect: 0.20,
   density: 0.18,
-  strokeThickness: 0.16,
-  hProfile: 0.18,
-  vProfile: 0.14,
-  serif: 0.08,
-  xHeight: 0.04,
+  strokeThickness: 0.18,
+  contrast: 0.14,
+  hProfile: 0.14,
+  vProfile: 0.10,
+  serif: 0.06,
 };
 
 const H_POINTS = 64;
@@ -139,6 +140,7 @@ export function extractFeaturesFromMask(
     aspect: 1,
     density: 0,
     strokeThickness: 0,
+    contrast: 1,
     hProfile: new Float32Array(H_POINTS),
     vProfile: new Float32Array(V_POINTS),
     serifScore: 0,
@@ -155,13 +157,16 @@ export function extractFeaturesFromMask(
   let totalInk = 0;
   let edgePixels = 0;
 
-  let topTerminals = 0;
-  let botTerminals = 0;
+  // Track horizontal and vertical ink run lengths for stroke contrast measurement
+  const hRuns: number[] = [];
+  const vRuns: number[] = [];
 
   for (let y = 0; y < bh; y++) {
+    let run = 0;
     for (let x = 0; x < bw; x++) {
       const idx = y * bw + x;
       if (mask[idx] === 1) {
+        run++;
         totalInk++;
         rawColInk[x]++;
         rawRowInk[y]++;
@@ -179,19 +184,29 @@ export function extractFeaturesFromMask(
         if (isEdge) {
           edgePixels++;
         }
-
-        if (y < bh * 0.18) {
-          if (x > 0 && x < bw - 1 && mask[idx - 1] === 1 && mask[idx + 1] === 1) {
-            topTerminals++;
-          }
-        }
-        if (y > bh * 0.82) {
-          if (x > 0 && x < bw - 1 && mask[idx - 1] === 1 && mask[idx + 1] === 1) {
-            botTerminals++;
-          }
+      } else {
+        if (run > 0) {
+          hRuns.push(run);
+          run = 0;
         }
       }
     }
+    if (run > 0) hRuns.push(run);
+  }
+
+  for (let x = 0; x < bw; x++) {
+    let run = 0;
+    for (let y = 0; y < bh; y++) {
+      if (mask[y * bw + x] === 1) {
+        run++;
+      } else {
+        if (run > 0) {
+          vRuns.push(run);
+          run = 0;
+        }
+      }
+    }
+    if (run > 0) vRuns.push(run);
   }
 
   if (totalInk < 15) return emptyFeatures;
@@ -204,8 +219,23 @@ export function extractFeaturesFromMask(
 
   const aspect = bw / Math.max(1, bh);
   const density = totalInk / Math.max(1, bw * bh);
-  const strokeThickness = totalInk / Math.max(1, edgePixels);
-  const serifScore = Math.min(1, (topTerminals + botTerminals) / Math.max(1, totalInk * 0.3));
+
+  // Normalized stroke thickness (dimensionless relative to box height)
+  const rawStroke = totalInk / Math.max(1, edgePixels);
+  const strokeThickness = rawStroke / Math.max(1, bh);
+
+  // Stroke Contrast: ratio of vertical stem width to horizontal crossbar height
+  let contrast = 1.0;
+  if (hRuns.length > 5 && vRuns.length > 5) {
+    hRuns.sort((a, b) => a - b);
+    vRuns.sort((a, b) => a - b);
+    const stemW = hRuns[Math.floor(hRuns.length * 0.35)];
+    const barH = vRuns[Math.floor(vRuns.length * 0.35)];
+    contrast = Math.max(0.5, Math.min(6.0, stemW / Math.max(1, barH)));
+  }
+
+  // Serif flare score: high contrast fonts have higher terminal modulation
+  const serifScore = Math.min(1.0, Math.max(0.0, (contrast - 1.25) / 1.5));
 
   let xHeightY = Math.round(bh * 0.4);
   let maxGrad = 0;
@@ -222,6 +252,7 @@ export function extractFeaturesFromMask(
     aspect,
     density,
     strokeThickness,
+    contrast,
     hProfile,
     vProfile,
     serifScore,
@@ -288,17 +319,17 @@ export function estimateStyle(features: FontFeatures, textLength = 6): StyleEsti
     };
   }
 
-  // 1. Weight Class estimation from density and strokeThickness
+  // 1. Weight Class estimation from density and normalized strokeThickness
   let weightClass: WeightClass = "Regular";
   let allowedWeights: WeightClass[] = ["Thin", "Regular", "Bold"];
 
-  if (features.density < 0.27 || features.strokeThickness < 2.1) {
+  if (features.strokeThickness < 0.055 || features.density < 0.24) {
     weightClass = "Thin";
     allowedWeights = ["Thin", "Regular"];
-  } else if (features.density >= 0.52 || features.strokeThickness >= 4.6) {
+  } else if (features.strokeThickness >= 0.13 || features.density >= 0.50) {
     weightClass = "Black";
     allowedWeights = ["Bold", "Black"];
-  } else if (features.density >= 0.38 || features.strokeThickness >= 3.2) {
+  } else if (features.strokeThickness >= 0.09 || features.density >= 0.36) {
     weightClass = "Bold";
     allowedWeights = ["Regular", "Bold", "Black"];
   } else {
@@ -325,16 +356,20 @@ export function estimateStyle(features: FontFeatures, textLength = 6): StyleEsti
   let categoryConfidence: "high" | "low" = "high";
   let allowedCategories: string[] = ["Sans Serif"];
 
-  const isConnectedCursive = safeLength >= 4 && hMetrics.minValley > 0.05 && hMetrics.valleysCount < 2;
-  const isScriptMetrics = widthClass === "Wide" && features.density < 0.38 && features.xHeightRatio < 0.62;
+  // Only classify as Script/Handwriting if there is clear connected cursive (valleys don't drop to 0)
+  const isConnectedCursive =
+    safeLength >= 4 &&
+    hMetrics.minValley > 0.10 &&
+    hMetrics.valleysCount === 0 &&
+    features.contrast > 1.25;
 
-  if (isConnectedCursive || isScriptMetrics) {
+  if (isConnectedCursive) {
     category = "Script/Handwriting";
     categoryConfidence = "high";
     allowedCategories = ["Script", "Handwriting", "Script/Handwriting"];
-  } else if (features.serifScore >= 0.20) {
+  } else if (features.contrast >= 1.55 || features.serifScore >= 0.22) {
     category = "Serif";
-    if (features.serifScore >= 0.28) {
+    if (features.contrast >= 1.85 || features.serifScore >= 0.35) {
       categoryConfidence = "high";
       allowedCategories = ["Serif"];
     } else {
@@ -345,13 +380,13 @@ export function estimateStyle(features: FontFeatures, textLength = 6): StyleEsti
     category = "Monospace";
     categoryConfidence = "high";
     allowedCategories = ["Monospace"];
-  } else if (features.density >= 0.52 || charAspect < 0.40) {
+  } else if (charAspect < 0.38 || (features.density >= 0.54 && charAspect < 0.45)) {
     category = "Display";
-    categoryConfidence = "low";
+    categoryConfidence = "high";
     allowedCategories = ["Display", "Sans Serif"];
   } else {
     category = "Sans Serif";
-    if (features.serifScore < 0.14) {
+    if (features.contrast < 1.30 && features.serifScore < 0.12) {
       categoryConfidence = "high";
       allowedCategories = ["Sans Serif"];
     } else {
@@ -466,27 +501,33 @@ export function extractImageFeatures(src: CanvasImageSource, sw: number, sh: num
 
   let x0 = w;
   let x1 = -1;
+  let y0 = h;
+  let y1 = -1;
   for (let y = bestY0; y <= bestY1; y++) {
     for (let x = 0; x < w; x++) {
       if (rawMask[y * w + x] === 1) {
         if (x < x0) x0 = x;
         if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
       }
     }
   }
 
-  if (x1 <= x0) {
+  if (x1 <= x0 || y1 <= y0) {
     x0 = 0;
     x1 = w - 1;
+    y0 = bestY0;
+    y1 = bestY1;
   }
 
   const bw = x1 - x0 + 1;
-  const bh = bestY1 - bestY0 + 1;
+  const bh = y1 - y0 + 1;
   const croppedMask = new Uint8Array(bw * bh);
 
   for (let y = 0; y < bh; y++) {
     for (let x = 0; x < bw; x++) {
-      croppedMask[y * bw + x] = rawMask[(bestY0 + y) * w + (x0 + x)];
+      croppedMask[y * bw + x] = rawMask[(y0 + y) * w + (x0 + x)];
     }
   }
 
@@ -518,6 +559,12 @@ export function verifyFontLoaded(family: string, testString = "MWQgypq190"): boo
   if (verifiedFontsCache.has(family)) return true;
 
   try {
+    // Fast path: modern browser native font loaded check
+    if (document.fonts.check(`72px "${family}"`)) {
+      verifiedFontsCache.add(family);
+      return true;
+    }
+
     const ctx = getMeasureContext();
     if (!ctx) return false;
 
@@ -536,11 +583,8 @@ export function verifyFontLoaded(family: string, testString = "MWQgypq190"): boo
     const isSerifFallback = Math.abs(candidateSerif - serifWidth) < 0.05;
     const isMonoFallback = Math.abs(candidateMono - monoWidth) < 0.05;
 
+    // If candidate rendered identically to BOTH serif and monospace fallbacks, font has not loaded
     if (isSerifFallback && isMonoFallback) {
-      return false;
-    }
-
-    if (document.fonts.check && !document.fonts.check(`72px "${family}"`, testString)) {
       return false;
     }
 
@@ -552,10 +596,10 @@ export function verifyFontLoaded(family: string, testString = "MWQgypq190"): boo
 }
 
 /**
- * Loads and verifies a candidate font list in batches of 20.
+ * Loads and verifies a candidate font list in batches with their supported weights.
  */
 export async function loadAndVerifyFonts(
-  fonts: { family: string }[],
+  fonts: { family: string; weights?: number[] }[],
   text: string,
   onBatchLoaded?: (loadedCount: number, totalCount: number) => void
 ): Promise<{ loaded: string[]; failed: string[] }> {
@@ -565,11 +609,17 @@ export async function loadAndVerifyFonts(
 
   const unverified = fonts.filter((f) => !verifiedFontsCache.has(f.family));
 
+  // 1. Add all font links to head immediately
   for (let i = 0; i < unverified.length; i += 20) {
     const chunk = unverified.slice(i, i + 20);
     const url =
       "https://fonts.googleapis.com/css2?" +
-      chunk.map((f) => "family=" + f.family.replace(/ /g, "+")).join("&") +
+      chunk
+        .map((f) => {
+          const w = f.weights && f.weights.length > 0 ? f.weights.join(";") : "400;700";
+          return `family=${f.family.replace(/ /g, "+")}:wght@${w}`;
+        })
+        .join("&") +
       "&display=swap";
 
     if (!document.querySelector(`link[href="${url}"]`)) {
@@ -580,15 +630,23 @@ export async function loadAndVerifyFonts(
     }
   }
 
-  for (let i = 0; i < unverified.length; i += 20) {
-    const chunk = unverified.slice(i, i + 20);
-    const promises = chunk.map((f) =>
-      document.fonts.load(`72px "${f.family}"`, text).catch(() => null)
-    );
-    await Promise.race([Promise.all(promises), new Promise((r) => setTimeout(r, 1200))]);
-    if (onBatchLoaded) {
-      onBatchLoaded(Math.min(fonts.length, i + 20), fonts.length);
-    }
+  // 2. Concurrently request all unverified font glyphs
+  const loadPromises = unverified.map((f, idx) =>
+    document.fonts.load(`72px "${f.family}"`, text).then(() => {
+      if (onBatchLoaded && idx % 10 === 0) {
+        onBatchLoaded(idx + 1, fonts.length);
+      }
+    }).catch(() => null)
+  );
+
+  // Allow up to 4.5s for initial cold network load
+  await Promise.race([
+    Promise.all(loadPromises),
+    new Promise((r) => setTimeout(r, 4500)),
+  ]);
+
+  if (onBatchLoaded) {
+    onBatchLoaded(fonts.length, fonts.length);
   }
 
   try {
@@ -708,7 +766,8 @@ export function computeFeatureDistance(
   const densityDiff = Math.abs(a.density - b.density);
   const strokeDiff =
     Math.abs(a.strokeThickness - b.strokeThickness) /
-    Math.max(0.5, (a.strokeThickness + b.strokeThickness) / 2);
+    Math.max(0.02, (a.strokeThickness + b.strokeThickness) / 2);
+  const contrastDiff = Math.abs(Math.log(Math.max(0.2, a.contrast) / Math.max(0.2, b.contrast)));
 
   let hDiff = 0;
   for (let i = 0; i < H_POINTS; i++) {
@@ -723,16 +782,15 @@ export function computeFeatureDistance(
   vDiff /= V_POINTS;
 
   const serifDiff = Math.abs(a.serifScore - b.serifScore);
-  const xHeightDiff = Math.abs(a.xHeightRatio - b.xHeightRatio);
 
   const mainDist =
     aspectDiff * W.aspect +
     densityDiff * W.density +
     strokeDiff * W.strokeThickness +
+    contrastDiff * W.contrast +
     hDiff * W.hProfile +
     vDiff * W.vProfile +
-    serifDiff * W.serif +
-    xHeightDiff * W.xHeight;
+    serifDiff * W.serif;
 
   if (!Number.isFinite(mainDist)) {
     return { distance: Infinity, secondary: Infinity };

@@ -10,6 +10,10 @@ export const FAQ: [string, string][] = [
     "TypeMatcher provides typographic style matching rather than an exact identification guarantee. It finds fonts that share the same category, weight class, and letterform proportions. Clear, large, horizontal text on a plain background works best."
   ],
   [
+    "What kind of screenshots work best for font matching?",
+    "For the most accurate matches, upload a high-contrast screenshot cropped closely around 1 to 4 clear words (such as a headline, title, or logo). Avoid full-page screenshots with navigation bars, icons, profile photos, or busy background photos, as these confuse the typographic analyzer."
+  ],
+  [
     "Is my image uploaded anywhere?",
     "No. Matching happens entirely on your device. Only the open-source text-recognition files and Google Fonts previews are downloaded to your browser."
   ],

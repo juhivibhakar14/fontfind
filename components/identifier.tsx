@@ -2,8 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ImagePlus, RotateCw, ClipboardPaste, AlertCircle, Bug } from "lucide-react";
-import { fontIdentifierService, type IdentifyResult } from "@/services/fontIdentifierService";
+import {
+  ImagePlus,
+  RotateCw,
+  ClipboardPaste,
+  AlertCircle,
+  Bug,
+  CheckCircle2,
+  XCircle,
+  Sparkles,
+  Lightbulb,
+} from "lucide-react";
+import { fontIdentifierService, preloadOcrWorker, type IdentifyResult } from "@/services/fontIdentifierService";
+import { loadAndVerifyFonts } from "@/lib/imageProcessing";
 import { useGoogleFonts } from "@/lib/useGoogleFonts";
 import { slug, css, type Font } from "@/lib/fonts/data";
 import FontCard from "./font-card";
@@ -35,6 +46,80 @@ const OK = ["image/jpeg", "image/png", "image/webp"];
 const MAX = 10 * 1024 * 1024;
 const SAMPLE = "The quick brown fox jumps over the lazy dog.";
 
+function ScreenshotGuidelines() {
+  return (
+    <div className="mt-8 rounded-3xl border border-line bg-card p-6 sm:p-8 text-left">
+      <div className="flex items-center gap-3 text-ink">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+          <Sparkles className="h-4.5 w-4.5" />
+        </div>
+        <div>
+          <h2 className="text-base sm:text-lg font-semibold tracking-tight text-ink">
+            Tips for Best Match Results
+          </h2>
+          <p className="text-xs sm:text-sm text-mute">
+            Font matching analyzes letter curves, thickness, and serifs. Follow these tips to get the closest matches:
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        {/* DOs */}
+        <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.04] p-4 sm:p-5">
+          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold text-sm mb-3">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>Screenshots that work best</span>
+          </div>
+          <ul className="space-y-2.5 text-xs sm:text-sm text-ink/90 leading-relaxed">
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0 mt-0.5">•</span>
+              <span><strong>1 to 4 clear words:</strong> Crop closely around a single title or headline (e.g. &ldquo;Research Engineer&rdquo;) rather than an entire full-page screenshot.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0 mt-0.5">•</span>
+              <span><strong>Plain, high-contrast background:</strong> Dark text on a clean light/white background, or crisp white text on solid dark.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0 mt-0.5">•</span>
+              <span><strong>Large, sharp letters:</strong> Text should be at least 30–60px tall so serifs, stroke thickness, and curves are clearly visible.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0 mt-0.5">•</span>
+              <span><strong>Horizontal & flat:</strong> Straight text without steep 3D perspective or circular wrapping.</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* DON'Ts */}
+        <div className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.04] p-4 sm:p-5">
+          <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-semibold text-sm mb-3">
+            <XCircle className="h-4 w-4 shrink-0" />
+            <span>Screenshots to avoid</span>
+          </div>
+          <ul className="space-y-2.5 text-xs sm:text-sm text-ink/90 leading-relaxed">
+            <li className="flex items-start gap-2">
+              <span className="text-rose-600 dark:text-rose-400 font-bold shrink-0 mt-0.5">•</span>
+              <span><strong>Full-page / busy screenshots:</strong> Pages with menus, profile pictures, and 10+ different fonts confuse the scanner.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-rose-600 dark:text-rose-400 font-bold shrink-0 mt-0.5">•</span>
+              <span><strong>Text touching logos or icons:</strong> Graphic icons right next to letters can be mistakenly merged into the font&apos;s shape.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-rose-600 dark:text-rose-400 font-bold shrink-0 mt-0.5">•</span>
+              <span><strong>Text over photos or busy textures:</strong> Gradients, photographic backgrounds, and patterns make letter outlines hard to isolate.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-rose-600 dark:text-rose-400 font-bold shrink-0 mt-0.5">•</span>
+              <span><strong>Tiny or blurry text:</strong> Low-resolution screenshots lack the pixel detail needed to measure font weights accurately.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Identifier({ fonts }: { fonts: Font[] }) {
   const [file, setFile] = useState<Blob | null>(null);
   const [url, setUrl] = useState("");
@@ -46,6 +131,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
   const [err, setErr] = useState("");
   const [prev, setPrev] = useState<Font | null>(null);
   const [overrideText, setOverrideText] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [isDebug, setIsDebug] = useState(false);
   const inp = useRef<HTMLInputElement>(null);
 
@@ -53,8 +139,22 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
     if (typeof window !== "undefined") {
       const p = new URLSearchParams(window.location.search);
       setIsDebug(p.get("debug") === "1" || process.env.NEXT_PUBLIC_DEBUG === "on");
+
+      // Pre-warm top fonts in the background on page load
+      if (fonts && fonts.length > 0) {
+        loadAndVerifyFonts(fonts.slice(0, 30), "Hamburgefonts").catch(() => {});
+      }
     }
-  }, []);
+  }, [fonts]);
+
+  const matchCategoryFilter = (cat: string) => {
+    if (categoryFilter === "All") return true;
+    if (categoryFilter === "Script") return cat === "Script" || cat === "Handwriting";
+    return cat === categoryFilter;
+  };
+
+  const displayedMatches = res ? res.matches.filter((m) => matchCategoryFilter(m.font.category)) : [];
+  const displayedSimilarMatches = res ? res.similar.filter((m) => matchCategoryFilter(m.font.category)) : [];
 
   const all = res ? [...res.matches, ...res.similar].map((m) => m.font) : [];
   useGoogleFonts(all);
@@ -72,6 +172,10 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
     setFile(f);
     setRot(0);
     setZoom(1);
+    setCategoryFilter("All");
+
+    // Pre-warm Tesseract OCR worker as soon as an image is dropped/loaded
+    preloadOcrWorker();
   }, []);
 
   useEffect(() => {
@@ -271,6 +375,16 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
               </button>
             </div>
 
+            <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-accent/20 bg-accent/[0.06] p-3 text-xs text-ink">
+              <Lightbulb className="h-4 w-4 text-accent shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <span className="font-semibold text-ink">Tip for busy screenshots:</span>{" "}
+                <span className="text-mute">
+                  If your image has multiple lines or words, type the exact word you want to match in the box below so the scanner focuses on its letterforms.
+                </span>
+              </div>
+            </div>
+
             <div className="mt-4">
               <label htmlFor="text-override-input" className="block text-xs font-medium text-mute mb-1">
                 Text in image (optional — leave blank to auto-detect with OCR):
@@ -333,11 +447,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
           </div>
         )}
 
-        {!file && !err && (
-          <p className="mt-6 text-center text-sm text-mute">
-            <b className="text-ink">No image yet.</b> Upload a screenshot and let&apos;s find matching typography.
-          </p>
-        )}
+        {!file && !err && <ScreenshotGuidelines />}
       </section>
 
       {/* When fewer than 20 fonts could load */}
@@ -438,8 +548,36 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
             Fonts in the open-source Google Fonts catalog with letterforms, weight, and proportions closest to your image.
           </p>
 
-          <ol className="mt-5 grid gap-4 items-stretch">
-            {res.matches.map((m) => (
+          {/* Interactive Category Filter Tabs */}
+          <div className="mt-4 flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Filter matches by font category">
+            {["All", "Sans Serif", "Serif", "Display", "Monospace", "Script"].map((cat) => {
+              const active = categoryFilter === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setCategoryFilter(cat)}
+                  className={`rounded-full px-3.5 py-1 text-xs font-medium transition-all ${
+                    active
+                      ? "bg-accent text-white shadow-sm"
+                      : "border border-line bg-card text-mute hover:border-ink hover:text-ink"
+                  }`}
+                >
+                  {cat === "Script" ? "Script / Handwriting" : cat}
+                </button>
+              );
+            })}
+          </div>
+
+          {displayedMatches.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-line bg-card p-6 text-center text-sm text-mute">
+              No top matches in the &ldquo;{categoryFilter}&rdquo; category. Try selecting &ldquo;All&rdquo; or another category.
+            </div>
+          ) : (
+            <ol className="mt-5 grid gap-4 items-stretch">
+              {displayedMatches.map((m) => (
               <li key={m.font.family} className="flex h-full min-w-0 flex-col rounded-2xl border border-line bg-card p-4 sm:p-5">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 min-w-0">
                   <h3
@@ -463,13 +601,16 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
                 <div className="my-3 flex-1 min-h-[4.2rem] max-h-[4.5rem] overflow-hidden py-0.5">
                   <p
                     className="line-clamp-2 break-words text-[clamp(1.375rem,4vw,2rem)] leading-snug"
-                    style={{ fontFamily: `'${m.font.family}',${m.font.fallback}` }}
+                    style={{
+                      fontFamily: `'${m.font.family}',${m.font.fallback}`,
+                      fontWeight: m.weight || 400,
+                    }}
                   >
                     {res.text || SAMPLE}
                   </p>
                 </div>
-                <p className="text-xs text-mute truncate min-w-0" title={`${m.font.category} · Google Fonts`}>
-                  {m.font.category} · Google Fonts
+                <p className="text-xs text-mute truncate min-w-0" title={`${m.font.category} · ${m.style} (${m.weight}) · Google Fonts`}>
+                  {m.font.category} · <span className="font-medium text-ink">{m.style} ({m.weight})</span> · Google Fonts
                 </p>
                 <div className="mt-auto pt-4 flex flex-wrap items-center gap-2">
                   <button
@@ -491,6 +632,7 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
               </li>
             ))}
           </ol>
+          )}
 
           {/* 4) Diagnostics Debug Panel (?debug=1) */}
           {isDebug && res.debug && (
@@ -559,17 +701,22 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
 
           {/* 3) "More fonts in a similar style" */}
           <h2 className="mt-12 text-2xl font-semibold">More fonts in a similar style</h2>
-          <div className="mt-5 grid gap-4 items-stretch sm:grid-cols-2 lg:grid-cols-3">
-            {res.similar.map((m) => (
-              <FontCard
-                key={m.font.family}
-                font={m.font}
-                label={m.matchLabel}
-                text={res.text || "The quick brown fox"}
-                onPreview={setPrev}
-              />
-            ))}
-          </div>
+          {displayedSimilarMatches.length === 0 ? (
+            <p className="mt-3 text-sm text-mute">No similar fonts matching this filter.</p>
+          ) : (
+            <div className="mt-5 grid gap-4 items-stretch sm:grid-cols-2 lg:grid-cols-3">
+              {displayedSimilarMatches.map((m) => (
+                <FontCard
+                  key={m.font.family}
+                  font={m.font}
+                  label={m.matchLabel}
+                  weight={m.weight}
+                  text={res.text || "The quick brown fox"}
+                  onPreview={setPrev}
+                />
+              ))}
+            </div>
+          )}
         </section>
       )}
 
