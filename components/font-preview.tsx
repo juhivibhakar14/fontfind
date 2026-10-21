@@ -3,46 +3,14 @@
 import { useState, useEffect } from "react";
 import { type Font, css, importUrl } from "@/lib/fonts/data";
 
-function CopyIcon() {
-  return (
-    <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
-      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg className="h-3.5 w-3.5 shrink-0 text-accent" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
+import CopyBtn from "@/components/copy-btn";
+export { CopyBtn };
 
 function CloseIcon() {
   return (
     <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M18 6 6 18M6 6l12 12" />
     </svg>
-  );
-}
-
-export function CopyBtn({ text, label }: { text: string; label: string }) {
-  const [ok, set] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={async () => {
-        await navigator.clipboard.writeText(text);
-        set(true);
-        setTimeout(() => set(false), 1500);
-      }}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm whitespace-nowrap hover:border-ink transition-colors"
-    >
-      {ok ? <CheckIcon /> : <CopyIcon />}
-      {ok ? "Copied" : label}
-    </button>
   );
 }
 

@@ -813,30 +813,13 @@ export function getFamilyPrefix(family: string): string {
   }
   return tokens[0];
 }
-
-// Backward-compatible exports
-export const W = 128, H = 32;
-export interface Ink { px: Float32Array; aspect: number; }
-export function normalize(src: CanvasImageSource, sw: number, sh: number) {
-  const f = extractImageFeatures(src, sw, sh);
-  return { px: f.hProfile, aspect: f.aspect, isEmpty: f.isEmpty };
-}
-export function renderInk(text: string, family: string, fallback = "sans-serif") {
-  const f = renderCandidateFeatures(text, family, fallback);
-  return { px: f.hProfile, aspect: f.aspect, isEmpty: f.isEmpty };
-}
-export function distance(a: any, b: any) {
-  return Math.abs(a.aspect - b.aspect);
-}
-export function computeSimilarity(d: number) {
+export function computeSimilarity(d: number): number {
   if (d <= 0.08) return Math.round(96 - d * 75);
   if (d <= 0.16) return Math.round(90 - (d - 0.08) * 100);
   if (d <= 0.28) return Math.round(82 - (d - 0.16) * 100);
   return Math.max(20, Math.round(55 - d * 50));
 }
-export async function loadFonts(fonts: { family: string }[], text = "Hamburgefonstiv") {
-  return loadAndVerifyFonts(fonts, text);
-}
+
 export async function similarTo(font: Font, pool: Font[]) {
   const T = "Hamburgefonstiv";
   await loadAndVerifyFonts([font, ...pool], T);

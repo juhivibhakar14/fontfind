@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ["lucide-react"],
+  experimental: {
+    cpus: 1,
+    workerThreads: false,
+  },
   async headers() {
     return [
       {

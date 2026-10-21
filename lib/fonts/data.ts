@@ -131,7 +131,6 @@ export const FONTS: Font[] = [
   f("Allura", "Script", ["Elegant", "Luxury"], [400]),
 ];
 
-export const byName=(n:string)=>FONTS.find(x=>x.family===n)!;
 export const css=(f:Font)=>`font-family: '${f.family}', ${f.fallback};`;
 export const importUrl=(f:Font)=>`https://fonts.googleapis.com/css2?family=${f.family.replace(/ /g,"+")}${f.weights.length>1?":wght@"+f.weights.join(";"):""}&display=swap`;
 

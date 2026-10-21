@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
-export default function CopyBtn({
+export function CopyBtn({
   text,
   label = "Copy Name",
   className = "",
@@ -29,7 +29,7 @@ export default function CopyBtn({
       type="button"
       onClick={handleCopy}
       aria-label={copied ? `Copied ${label}` : label}
-      className={`inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:border-ink hover:bg-line/20 active:scale-95 ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm whitespace-nowrap hover:border-ink transition-colors ${className}`}
     >
       {copied ? (
         <>
@@ -45,3 +45,5 @@ export default function CopyBtn({
     </button>
   );
 }
+
+export default CopyBtn;
