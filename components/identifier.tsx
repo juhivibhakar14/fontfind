@@ -5,14 +5,18 @@ import Link from "next/link";
 import {
   ImagePlus,
   RotateCw,
+  RotateCcw,
+  Crop,
   ClipboardPaste,
   AlertCircle,
+  AlertTriangle,
   Bug,
   CheckCircle2,
   XCircle,
   Sparkles,
   Lightbulb,
 } from "lucide-react";
+import ImageCropper from "./image-cropper";
 import {
   fontIdentifierService,
   preloadOcrWorker,
@@ -163,7 +167,11 @@ function ScreenshotGuidelines() {
 
 export default function Identifier({ fonts }: { fonts: Font[] }) {
   const [file, setFile] = useState<Blob | null>(null);
+  const [originalFile, setOriginalFile] = useState<Blob | null>(null);
   const [url, setUrl] = useState("");
+  const [originalUrl, setOriginalUrl] = useState("");
+  const [isCropped, setIsCropped] = useState(false);
+  const [isCropping, setIsCropping] = useState(false);
   const [rot, setRot] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [busy, setBusy] = useState(false);
@@ -180,8 +188,9 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
   useEffect(() => {
     return () => {
       if (url) URL.revokeObjectURL(url);
+      if (originalUrl && originalUrl !== url) URL.revokeObjectURL(originalUrl);
     };
-  }, [url]);
+  }, [url, originalUrl]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -216,12 +225,17 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
     setErr("");
     setRes(null);
     setOverrideText("");
+    setIsCropped(false);
+    setIsCropping(false);
     if (!OK.includes(f.type)) return setErr("Use a JPG, PNG or WEBP image.");
     if (f.size > MAX) return setErr("That image is over 10 MB. Try a smaller one.");
+    const newUrl = URL.createObjectURL(f);
     setUrl((u) => {
       if (u) URL.revokeObjectURL(u);
-      return URL.createObjectURL(f);
+      return newUrl;
     });
+    setOriginalUrl(newUrl);
+    setOriginalFile(f);
     setFile(f);
     setRot(0);
     setZoom(1);
@@ -266,12 +280,45 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
     analysisIdRef.current++;
     if (inp.current) inp.current.value = "";
     if (url) URL.revokeObjectURL(url);
+    if (originalUrl && originalUrl !== url) URL.revokeObjectURL(originalUrl);
     setFile(null);
+    setOriginalFile(null);
     setUrl("");
+    setOriginalUrl("");
+    setIsCropped(false);
+    setIsCropping(false);
     setRes(null);
     setErr("");
     setOverrideText("");
     setProgress(null);
+  };
+
+  const handleApplyCrop = (croppedBlob: Blob) => {
+    analysisIdRef.current++;
+    const croppedUrl = URL.createObjectURL(croppedBlob);
+    setUrl((u) => {
+      if (u && u !== originalUrl) URL.revokeObjectURL(u);
+      return croppedUrl;
+    });
+    setFile(croppedBlob);
+    setIsCropped(true);
+    setIsCropping(false);
+    setRes(null);
+    preloadOcrWorker();
+  };
+
+  const handleResetCrop = () => {
+    if (originalFile && originalUrl) {
+      analysisIdRef.current++;
+      setUrl((u) => {
+        if (u && u !== originalUrl) URL.revokeObjectURL(u);
+        return originalUrl;
+      });
+      setFile(originalFile);
+      setIsCropped(false);
+      setIsCropping(false);
+      setRes(null);
+    }
   };
 
   const run = async (customText?: string, allowFallback = true) => {
@@ -397,96 +444,145 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
           </div>
         ) : (
           <div className="rounded-3xl border border-line bg-card p-4">
-            <div className="flex h-64 items-center justify-center overflow-hidden rounded-2xl border border-line bg-bg">
-              {/* eslint-disable-next-line @next/next/no-img-element -- client-side blob object URL cannot use next/image */}
-              <img
-                src={url}
-                alt="Uploaded text sample to analyze"
-                className="max-h-full max-w-full transition-transform"
-                style={{ transform: `rotate(${rot}deg) scale(${zoom})` }}
+            {isCropping ? (
+              <ImageCropper
+                imageBlob={originalFile || file}
+                onCrop={handleApplyCrop}
+                onCancel={() => setIsCropping(false)}
               />
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setRot((rot + 90) % 360)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm hover:border-ink whitespace-nowrap shrink-0"
-              >
-                <RotateCw className="h-3.5 w-3.5" />
-                Rotate
-              </button>
-              <label className="flex min-w-[140px] flex-1 items-center gap-2 text-sm text-mute">
-                Zoom
-                <input
-                  type="range"
-                  min={1}
-                  max={3}
-                  step={0.1}
-                  value={zoom}
-                  onChange={(e) => setZoom(+e.target.value)}
-                  className="flex-1 accent-[var(--accent)]"
-                />
-              </label>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-              <span className="text-mute shrink-0">Replace image:</span>
-              <button
-                type="button"
-                onClick={() => inp.current?.click()}
-                className="underline underline-offset-4 whitespace-nowrap"
-              >
-                Upload new
-              </button>
-              <button
-                type="button"
-                onClick={paste}
-                className="underline underline-offset-4 whitespace-nowrap"
-              >
-                Paste
-              </button>
-              <button
-                type="button"
-                onClick={example}
-                className="underline underline-offset-4 whitespace-nowrap"
-              >
-                Example
-              </button>
-              <button
-                type="button"
-                onClick={clear}
-                className="text-mute underline underline-offset-4 whitespace-nowrap sm:ml-auto"
-              >
-                ← Start over
-              </button>
-            </div>
+            ) : (
+              <>
+                <div className="flex h-64 items-center justify-center overflow-hidden rounded-2xl border border-line bg-bg relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- client-side blob object URL cannot use next/image */}
+                  <img
+                    src={url}
+                    alt="Uploaded text sample to analyze"
+                    className="max-h-full max-w-full transition-transform"
+                    style={{ transform: `rotate(${rot}deg) scale(${zoom})` }}
+                  />
+                  {isCropped && (
+                    <span className="absolute top-2.5 left-2.5 rounded-full bg-accent/90 backdrop-blur px-2.5 py-0.5 text-[11px] font-medium text-white shadow">
+                      Cropped Area
+                    </span>
+                  )}
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setRot((rot + 90) % 360)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm hover:border-ink whitespace-nowrap shrink-0"
+                  >
+                    <RotateCw className="h-3.5 w-3.5" />
+                    Rotate
+                  </button>
 
-            <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-accent/20 bg-accent/[0.06] p-3 text-xs text-ink">
-              <Lightbulb className="h-4 w-4 text-accent shrink-0 mt-0.5" />
-              <div className="leading-relaxed">
-                <span className="font-semibold text-ink">Tip for busy screenshots:</span>{" "}
-                <span className="text-mute">
-                  If your image has multiple lines or words, type the exact word you want to match
-                  in the box below so the scanner focuses on its letterforms.
-                </span>
-              </div>
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsCropping(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-sm font-medium text-ink hover:bg-accent/20 whitespace-nowrap shrink-0"
+                  >
+                    <Crop className="h-3.5 w-3.5 text-accent" />
+                    {isCropped ? "Re-crop Area" : "Crop Text Area"}
+                  </button>
 
-            <div className="mt-4">
-              <label
-                htmlFor="text-override-input"
-                className="block text-xs font-medium text-mute mb-1"
-              >
-                Text in image (optional — leave blank to auto-detect with OCR):
-              </label>
-              <input
-                id="text-override-input"
-                type="text"
-                value={overrideText}
-                onChange={(e) => setOverrideText(e.target.value)}
-                placeholder="e.g. COFFEE, VOGUE, MINIMAL..."
-                className="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-            </div>
+                  {isCropped && (
+                    <button
+                      type="button"
+                      onClick={handleResetCrop}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm text-mute hover:text-ink whitespace-nowrap shrink-0"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Reset to Full Image
+                    </button>
+                  )}
+
+                  <label className="flex min-w-[140px] flex-1 items-center gap-2 text-sm text-mute">
+                    Zoom
+                    <input
+                      type="range"
+                      min={1}
+                      max={3}
+                      step={0.1}
+                      value={zoom}
+                      onChange={(e) => setZoom(+e.target.value)}
+                      className="flex-1 accent-[var(--accent)]"
+                    />
+                  </label>
+                </div>
+              </>
+            )}
+
+            {!isCropping && (
+              <>
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                  <span className="text-mute shrink-0">Replace image:</span>
+                  <button
+                    type="button"
+                    onClick={() => inp.current?.click()}
+                    className="underline underline-offset-4 whitespace-nowrap"
+                  >
+                    Upload new
+                  </button>
+                  <button
+                    type="button"
+                    onClick={paste}
+                    className="underline underline-offset-4 whitespace-nowrap"
+                  >
+                    Paste
+                  </button>
+                  <button
+                    type="button"
+                    onClick={example}
+                    className="underline underline-offset-4 whitespace-nowrap"
+                  >
+                    Example
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clear}
+                    className="text-mute underline underline-offset-4 whitespace-nowrap sm:ml-auto"
+                  >
+                    ← Start over
+                  </button>
+                </div>
+
+                <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-accent/20 bg-accent/[0.06] p-3 text-xs text-ink">
+                  <Lightbulb className="h-4 w-4 text-accent shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    <span className="font-semibold text-ink">Tip for best accuracy:</span>{" "}
+                    <span className="text-mute">
+                      {isCropped
+                        ? "Great! You cropped the text. You can also verify or type the exact word below to ensure 100% letterform alignment."
+                        : 'For closest results, click "Crop Text Area" to isolate a single word, or type the exact word in the box below.'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <label
+                      htmlFor="text-override-input"
+                      className="block text-xs font-medium text-mute"
+                    >
+                      Text in image (recommended for maximum accuracy):
+                    </label>
+                    {res?.textSource === "auto" && (
+                      <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                        ✓ Auto-read: &ldquo;{res.text}&rdquo;
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    id="text-override-input"
+                    type="text"
+                    value={overrideText}
+                    onChange={(e) => setOverrideText(e.target.value)}
+                    placeholder="e.g. COFFEE, VOGUE, MINIMAL..."
+                    className="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+              </>
+            )}
 
             <input
               ref={inp}
@@ -616,11 +712,18 @@ export default function Identifier({ fonts }: { fonts: Font[] }) {
           )}
 
           {res.textSource === "fallback" && (
-            <div className="mb-4 rounded-xl border border-line bg-card p-3 text-xs text-mute flex items-center justify-between gap-3">
-              <span>
-                💡 Matched by visual letterform shape and proportions. To match specific letters,
-                enter the word in the search box above.
-              </span>
+            <div className="mb-5 rounded-2xl border border-amber-500/30 bg-amber-500/[0.08] p-4 text-xs sm:text-sm text-ink flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <span className="font-semibold text-amber-700 dark:text-amber-300">
+                  Text was not clearly recognized by automatic OCR:
+                </span>{" "}
+                <span className="text-mute">
+                  These fonts were matched by visual category and stroke proportions using sample
+                  letters (&ldquo;Typography&rdquo;). For an exact glyph match, click &ldquo;Crop
+                  Text Area&rdquo; or type the exact word in the box above and re-scan.
+                </span>
+              </div>
             </div>
           )}
 

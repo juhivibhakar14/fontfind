@@ -4,6 +4,9 @@ export default {
   content: ["./app/**/*.tsx", "./components/**/*.tsx"],
   theme: {
     extend: {
+      screens: {
+        xs: "480px",
+      },
       colors: {
         bg: "var(--bg)",
         ink: "var(--ink)",

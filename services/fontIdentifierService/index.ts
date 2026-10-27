@@ -121,7 +121,13 @@ async function prepareImageForOcr(image: Blob): Promise<Blob> {
     const h = bmp.height;
     if (w < 2 || h < 2) return image;
 
-    const scale = Math.min(2, Math.max(1, 1200 / Math.max(w, h)));
+    const minDim = Math.min(w, h);
+    const maxDim = Math.max(w, h);
+    // Scale up small/cropped text so character height is at least ~100px for accurate OCR recognition
+    const scale = Math.min(
+      4,
+      Math.max(1, Math.max(120 / Math.max(1, minDim), 1200 / Math.max(1, maxDim))),
+    );
     const targetW = Math.round(w * scale);
     const targetH = Math.round(h * scale);
 

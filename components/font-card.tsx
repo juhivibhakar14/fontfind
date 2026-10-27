@@ -66,17 +66,17 @@ export default function FontCard({
         Fonts
       </p>
 
-      <div className="mt-auto pt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-auto pt-4 flex flex-wrap items-center gap-2.5">
         <button
           type="button"
           onClick={() => onPreview(font)}
-          className="inline-flex items-center rounded-lg border border-line px-3 py-1.5 text-sm whitespace-nowrap hover:border-ink transition-colors"
+          className="min-h-[44px] inline-flex items-center justify-center rounded-xl border border-line bg-bg px-4 py-2.5 text-sm font-medium whitespace-nowrap hover:border-ink active:scale-[0.98] active:bg-line/40 transition-all flex-1 sm:flex-initial"
         >
           Preview
         </button>
         <Link
           href={`/fonts/${slug(font.family)}`}
-          className="inline-flex items-center rounded-lg border border-line px-3 py-1.5 text-sm whitespace-nowrap text-accent hover:border-ink transition-colors"
+          className="min-h-[44px] inline-flex items-center justify-center rounded-xl border border-line bg-bg px-4 py-2.5 text-sm font-medium whitespace-nowrap text-accent hover:border-ink active:scale-[0.98] active:bg-line/40 transition-all flex-1 sm:flex-initial"
         >
           Details &amp; pairings →
         </Link>

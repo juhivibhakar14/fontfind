@@ -60,10 +60,10 @@ export default function Explorer({ fonts }: { fonts: Font[] }) {
         setN(STEP);
       }}
       aria-pressed={on}
-      className={`inline-flex h-8 items-center justify-center rounded-full border px-3.5 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
+      className={`min-h-[44px] shrink-0 snap-start inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-all active:scale-95 ${
         on
-          ? "border-ink bg-ink text-bg"
-          : "border-line bg-card/60 text-mute hover:border-line/80 hover:text-ink"
+          ? "border-ink bg-ink text-bg font-semibold shadow-sm"
+          : "border-line bg-card text-mute hover:border-line/80 hover:text-ink active:bg-line/40"
       }`}
     >
       {l}
@@ -71,13 +71,16 @@ export default function Explorer({ fonts }: { fonts: Font[] }) {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pt-14">
+    <div className="mx-auto max-w-6xl px-4 pt-10 sm:pt-14 pb-16">
       <h1 className="font-display text-[clamp(2rem,6vw,4rem)] font-semibold tracking-tight leading-tight sm:whitespace-nowrap">
         Explore Fonts
       </h1>
-      <p className="mt-3 text-lg text-mute">Find the perfect font for your next design.</p>
+      <p className="mt-2 sm:mt-3 text-base sm:text-lg text-mute">
+        Find the perfect font for your next design.
+      </p>
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-2">
+      {/* Search & preview inputs with iOS 16px zoom prevention */}
+      <div className="mt-6 sm:mt-8 grid gap-3 sm:grid-cols-2">
         <input
           type="search"
           value={q}
@@ -87,28 +90,72 @@ export default function Explorer({ fonts }: { fonts: Font[] }) {
           }}
           placeholder="Search fonts..."
           aria-label="Search fonts"
-          className="w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:ring-1 focus:ring-accent"
+          autoComplete="off"
+          autoCorrect="off"
+          enterKeyHint="search"
+          className="min-h-[44px] w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-base sm:text-sm text-ink placeholder:text-mute focus:outline-none focus:ring-2 focus:ring-accent"
         />
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           aria-label="Preview text for all fonts"
-          className="w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+          autoComplete="off"
+          enterKeyHint="done"
+          className="min-h-[44px] w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-base sm:text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
         />
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Category">
+      {/* Horizontally scrollable single row with scroll-snap and hidden scrollbar on mobile */}
+      <div
+        className="mt-4 -mx-4 px-4 overflow-x-auto no-scrollbar flex items-center gap-2 snap-x snap-mandatory sm:flex-wrap sm:mx-0 sm:px-0"
+        role="group"
+        aria-label="Category filters"
+      >
+        <button
+          type="button"
+          onClick={() => {
+            setCat(null);
+            setN(STEP);
+          }}
+          className={`min-h-[44px] shrink-0 snap-start inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-all active:scale-95 ${
+            !cat
+              ? "border-ink bg-ink text-bg font-semibold shadow-sm"
+              : "border-line bg-card text-mute hover:text-ink active:bg-line/40"
+          }`}
+        >
+          All Categories
+        </button>
         {CATS.map((c) => chip(c, cat === c, () => setCat(cat === c ? null : c)))}
       </div>
-      <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Style">
+
+      <div
+        className="mt-2.5 -mx-4 px-4 overflow-x-auto no-scrollbar flex items-center gap-2 snap-x snap-mandatory sm:flex-wrap sm:mx-0 sm:px-0"
+        role="group"
+        aria-label="Style filters"
+      >
+        <button
+          type="button"
+          onClick={() => {
+            setMood(null);
+            setN(STEP);
+          }}
+          className={`min-h-[44px] shrink-0 snap-start inline-flex items-center justify-center rounded-full border px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-all active:scale-95 ${
+            !mood
+              ? "border-ink bg-ink text-bg font-semibold shadow-sm"
+              : "border-line bg-card text-mute hover:text-ink active:bg-line/40"
+          }`}
+        >
+          All Moods
+        </button>
         {MOODS.map((m) => chip(m, mood === m, () => setMood(mood === m ? null : m)))}
       </div>
 
-      <p className="mt-6 text-sm text-mute">
+      <p className="mt-5 text-sm text-mute">
         Showing {shown.length} of {list.length} fonts
       </p>
 
-      <div className="mt-4 grid gap-4 items-stretch sm:grid-cols-2 lg:grid-cols-3">
+      {/* Font grid: 1 col below 480px, 2 cols from 480px (xs:), 3 cols from 1024px (lg:) */}
+      <div className="mt-4 grid gap-4 items-stretch xs:grid-cols-2 lg:grid-cols-3">
         {shown.map((f) => (
           <FontCard key={f.family} font={f} text={text} onPreview={setPrev} />
         ))}
@@ -119,11 +166,11 @@ export default function Explorer({ fonts }: { fonts: Font[] }) {
       )}
 
       {shown.length < list.length && (
-        <div className="mt-6 text-center">
+        <div className="mt-8 text-center">
           <button
             type="button"
             onClick={() => setN(n + STEP)}
-            className="rounded-lg border border-line px-5 py-2 text-sm font-medium hover:border-ink transition-colors"
+            className="min-h-[44px] w-full sm:w-auto rounded-xl border border-line bg-card px-6 py-2.5 text-sm font-medium hover:border-ink active:scale-95 transition-all shadow-sm"
           >
             Load more fonts
           </button>
@@ -142,7 +189,7 @@ export default function Explorer({ fonts }: { fonts: Font[] }) {
             list="fl"
             value={head}
             onChange={(e) => setHead(e.target.value)}
-            className="w-64 max-w-full rounded-lg border border-line bg-card px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+            className="min-h-[44px] w-64 max-w-full rounded-xl border border-line bg-card px-3.5 py-2 text-base sm:text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </label>
         <datalist id="fl">
@@ -153,7 +200,7 @@ export default function Explorer({ fonts }: { fonts: Font[] }) {
 
         {!h && <p className="mt-4 text-mute">Pick a font from the list to see pairings.</p>}
 
-        <div className="mt-5 grid gap-4 items-stretch sm:grid-cols-2 md:grid-cols-3">
+        <div className="mt-5 grid gap-4 items-stretch xs:grid-cols-2 md:grid-cols-3">
           {h &&
             pairs.map((b) => (
               <article

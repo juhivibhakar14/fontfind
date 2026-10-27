@@ -26,8 +26,11 @@ export default function FontDetail({ font, fonts }: { font: Font; fonts: Font[] 
   const ff = (f: Font) => ({ fontFamily: `'${f.family}',${f.fallback}` });
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-12">
-      <Link href="/fonts" className="text-sm text-mute hover:text-ink">
+    <div className="mx-auto max-w-5xl px-4 pt-10 sm:pt-12 pb-16">
+      <Link
+        href="/fonts"
+        className="min-h-[44px] inline-flex items-center gap-1.5 rounded-xl px-3 py-2 -ml-3 text-sm text-mute hover:text-ink hover:bg-card active:scale-95 transition-all"
+      >
         ← All fonts
       </Link>
 
@@ -45,7 +48,9 @@ export default function FontDetail({ font, fonts }: { font: Font; fonts: Font[] 
         value={text}
         onChange={(e) => setText(e.target.value)}
         aria-label="Specimen text"
-        className="mt-6 w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+        autoComplete="off"
+        enterKeyHint="done"
+        className="mt-6 min-h-[44px] w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-base sm:text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
       />
 
       <p className="mt-6 break-words text-[clamp(2rem,6vw,4.5rem)] leading-tight" style={ff(font)}>
@@ -58,7 +63,7 @@ export default function FontDetail({ font, fonts }: { font: Font; fonts: Font[] 
         abcdefghijklmnopqrstuvwxyz 0123456789
       </p>
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-6 flex flex-wrap gap-2.5">
         <CopyBtn text={font.family} label="Copy Font Name" />
         <CopyBtn text={css(font)} label="Copy Code" />
         <CopyBtn text={`<link rel="stylesheet" href="${importUrl(font)}">`} label="Copy embed" />
@@ -67,12 +72,12 @@ export default function FontDetail({ font, fonts }: { font: Font; fonts: Font[] 
       <AdSlot id="font-page" />
 
       <h2 className="mt-12 text-2xl font-semibold">{font.family} font pairings</h2>
-      <div className="mt-4 grid gap-4 items-stretch sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-4 grid gap-4 items-stretch xs:grid-cols-2 lg:grid-cols-3">
         {pairs.map((b) => (
           <Link
             key={b.family}
             href={`/fonts/${slug(b.family)}`}
-            className="flex h-full min-w-0 flex-col rounded-2xl border border-line bg-card p-4 sm:p-5 hover:border-ink transition-colors"
+            className="flex h-full min-w-0 flex-col rounded-2xl border border-line bg-card p-4 sm:p-5 hover:border-ink active:scale-[0.98] transition-all"
           >
             <p
               className="text-xl sm:text-2xl font-semibold leading-tight truncate min-w-0"
@@ -101,13 +106,13 @@ export default function FontDetail({ font, fonts }: { font: Font; fonts: Font[] 
         Closest matches ranked by comparing letterform style and proportions in your browser.
       </p>
 
-      <div className="mt-4 grid gap-4 items-stretch sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-4 grid gap-4 items-stretch xs:grid-cols-2 lg:grid-cols-3">
         {sim.length === 0 && <p className="text-mute">Comparing shapes…</p>}
         {sim.map((s) => (
           <Link
             key={s.font.family}
             href={`/fonts/${slug(s.font.family)}`}
-            className="flex h-full min-w-0 flex-col rounded-2xl border border-line bg-card p-4 sm:p-5 hover:border-ink transition-colors"
+            className="flex h-full min-w-0 flex-col rounded-2xl border border-line bg-card p-4 sm:p-5 hover:border-ink active:scale-[0.98] transition-all"
           >
             <p className="text-4xl leading-none select-none" style={ff(s.font)}>
               Aa

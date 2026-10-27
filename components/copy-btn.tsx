@@ -37,16 +37,20 @@ export function CopyBtn({
       type="button"
       onClick={handleCopy}
       aria-label={copied ? `Copied ${label}` : label}
-      className={`inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm whitespace-nowrap hover:border-ink transition-colors ${className}`}
+      className={`min-h-[44px] min-w-[44px] inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-medium whitespace-nowrap transition-all active:scale-95 ${
+        copied
+          ? "border-accent bg-accent/10 text-accent font-semibold"
+          : "border-line bg-card text-ink hover:border-ink hover:bg-line/20 active:bg-line/40"
+      } ${className}`}
     >
       {copied ? (
         <>
-          <Check className="h-3.5 w-3.5 text-accent" />
-          <span className="text-accent">Copied</span>
+          <Check className="h-4 w-4 text-accent shrink-0" />
+          <span>Copied!</span>
         </>
       ) : (
         <>
-          <Copy className="h-3.5 w-3.5 text-mute" />
+          <Copy className="h-4 w-4 text-mute shrink-0" />
           <span>{label}</span>
         </>
       )}
